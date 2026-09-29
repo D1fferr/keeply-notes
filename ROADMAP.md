@@ -25,7 +25,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
 
 ## 📁 Phase 2: Multilevel Folders & Folder Navigation
 
-- [ ] **Task 2.1: Folder Repository & Recursive CTE Queries**
+- [x] **Task 2.1: Folder Repository & Recursive CTE Queries**
   - Implement CRUD operations for folders in Drift.
   - Write recursive SQLite CTE query in Drift to retrieve all subfolders and notes within a folder subtree.
 

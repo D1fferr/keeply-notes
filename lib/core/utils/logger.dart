@@ -3,6 +3,12 @@ import 'package:flutter/foundation.dart';
 class AppLogger {
   AppLogger._();
 
+  static void debug(String message) {
+    if (kDebugMode) {
+      debugPrint('[DEBUG] KeeplyNotes: $message');
+    }
+  }
+
   static void info(String message) {
     if (kDebugMode) {
       debugPrint('[INFO] KeeplyNotes: $message');
