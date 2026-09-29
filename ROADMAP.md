@@ -29,7 +29,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Implement CRUD operations for folders in Drift.
   - Write recursive SQLite CTE query in Drift to retrieve all subfolders and notes within a folder subtree.
 
-- [ ] **Task 2.2: Folder Tree UI & Breadcrumb Navigation**
+- [x] **Task 2.2: Folder Tree UI & Breadcrumb Navigation**
   - Build minimalist UI for viewing and managing folder hierarchy.
   - Add breadcrumb navigation bar (`Home > Folder > Subfolder`).
   - Add folder creation, renaming, moving, and deletion dialogs.
