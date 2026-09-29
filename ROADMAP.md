@@ -16,7 +16,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Configure foreign keys (with `ON DELETE CASCADE` for sub-reminders) and indices.
   - Run `build_runner` to generate Drift database code.
 
-- [ ] **Task 1.3: SQLCipher Disk Encryption & Database Wiring**
+- [x] **Task 1.3: SQLCipher Disk Encryption & Database Wiring**
   - Configure `sqflite_sqlcipher` database opener.
   - Implement secure database key generation and storage via `flutter_secure_storage`.
   - Verify database initialization and local encrypted storage.
