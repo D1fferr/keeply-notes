@@ -11,7 +11,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Setup feature-first clean architecture directory layout (`lib/core/`, `lib/features/`).
   - Add core dependencies (`drift`, `sqflite_sqlcipher`, `flutter_secure_storage`, `uuid`, etc.) in `pubspec.yaml`.
 
-- [ ] **Task 1.2: Drift Database Schemas & Data Models**
+- [x] **Task 1.2: Drift Database Schemas & Data Models**
   - Define Drift tables: `Folders`, `Notes`, `Reminders`, `SubReminders`, and `Attachments`.
   - Configure foreign keys (with `ON DELETE CASCADE` for sub-reminders) and indices.
   - Run `build_runner` to generate Drift database code.
