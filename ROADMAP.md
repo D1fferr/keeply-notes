@@ -6,7 +6,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
 
 ## 🏗 Phase 1: Project Setup & Encrypted Database Foundation
 
-- [ ] **Task 1.1: Flutter Project Initialization & Project Structure**
+- [x] **Task 1.1: Flutter Project Initialization & Project Structure**
   - Initialize Flutter app supporting Android and iOS.
   - Setup feature-first clean architecture directory layout (`lib/core/`, `lib/features/`).
   - Add core dependencies (`drift`, `sqflite_sqlcipher`, `flutter_secure_storage`, `uuid`, etc.) in `pubspec.yaml`.
