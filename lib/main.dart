@@ -11,6 +11,10 @@ import 'features/folders/domain/usecases/folder_crud_usecases.dart';
 import 'features/folders/domain/usecases/watch_folders_usecase.dart';
 import 'features/folders/presentation/cubit/folder_cubit.dart';
 import 'features/folders/presentation/screens/folders_screen.dart';
+import 'features/notes/data/datasources/note_local_data_source_impl.dart';
+import 'features/notes/data/repositories/note_repository_impl.dart';
+import 'features/notes/domain/usecases/note_crud_usecases.dart';
+import 'features/notes/presentation/cubit/notes_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,29 +36,64 @@ Future<void> main() async {
   final db = dbService.database;
 
   // ── Wire up folder feature ─────────────────────────────────────────────────
-  final dataSource = FolderLocalDataSourceImpl(db);
-  final repository = FolderRepositoryImpl(dataSource);
+  final folderDataSource = FolderLocalDataSourceImpl(db);
+  final folderRepository = FolderRepositoryImpl(folderDataSource);
 
   final folderCubit = FolderCubit(
-    watchRootFolders: WatchRootFoldersUseCase(repository),
-    watchSubfolders: WatchSubfoldersUseCase(repository),
-    getFolderById: GetFolderByIdUseCase(repository),
-    createFolder: CreateFolderUseCase(repository),
-    renameFolder: RenameFolderUseCase(repository),
-    moveFolder: MoveFolderUseCase(repository),
-    setFolderProtection: SetFolderProtectionUseCase(repository),
-    deleteFolder: DeleteFolderUseCase(repository),
+    watchRootFolders: WatchRootFoldersUseCase(folderRepository),
+    watchSubfolders: WatchSubfoldersUseCase(folderRepository),
+    getFolderById: GetFolderByIdUseCase(folderRepository),
+    createFolder: CreateFolderUseCase(folderRepository),
+    renameFolder: RenameFolderUseCase(folderRepository),
+    moveFolder: MoveFolderUseCase(folderRepository),
+    setFolderProtection: SetFolderProtectionUseCase(folderRepository),
+    deleteFolder: DeleteFolderUseCase(folderRepository),
   );
 
-  runApp(KeeplyNotesApp(folderCubit: folderCubit));
+  // ── Wire up note feature ───────────────────────────────────────────────────
+  final noteDataSource = NoteLocalDataSourceImpl(db);
+  final noteRepository = NoteRepositoryImpl(noteDataSource);
+
+  final createNoteUseCase = CreateNoteUseCase(noteRepository);
+  final updateNoteUseCase = UpdateNoteUseCase(noteRepository);
+  final deleteNoteUseCase = DeleteNoteUseCase(noteRepository);
+  final togglePinNoteUseCase = TogglePinNoteUseCase(noteRepository);
+  final moveNoteUseCase = MoveNoteUseCase(noteRepository);
+  final watchNotesInFolderUseCase = WatchNotesInFolderUseCase(noteRepository);
+
+  final notesCubit = NotesCubit(
+    watchNotesInFolder: watchNotesInFolderUseCase,
+    togglePinNote: togglePinNoteUseCase,
+    deleteNote: deleteNoteUseCase,
+    moveNote: moveNoteUseCase,
+  );
+
+  runApp(KeeplyNotesApp(
+    folderCubit: folderCubit,
+    notesCubit: notesCubit,
+    createNoteUseCase: createNoteUseCase,
+    updateNoteUseCase: updateNoteUseCase,
+    deleteNoteUseCase: deleteNoteUseCase,
+  ));
 }
 
 // ─── App root ─────────────────────────────────────────────────────────────────
 
 class KeeplyNotesApp extends StatelessWidget {
-  const KeeplyNotesApp({super.key, required this.folderCubit});
+  const KeeplyNotesApp({
+    super.key,
+    required this.folderCubit,
+    required this.notesCubit,
+    required this.createNoteUseCase,
+    required this.updateNoteUseCase,
+    required this.deleteNoteUseCase,
+  });
 
   final FolderCubit folderCubit;
+  final NotesCubit notesCubit;
+  final CreateNoteUseCase createNoteUseCase;
+  final UpdateNoteUseCase updateNoteUseCase;
+  final DeleteNoteUseCase deleteNoteUseCase;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +103,13 @@ class KeeplyNotesApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: FoldersScreen(cubit: folderCubit),
+      home: FoldersScreen(
+        folderCubit: folderCubit,
+        notesCubit: notesCubit,
+        createNoteUseCase: createNoteUseCase,
+        updateNoteUseCase: updateNoteUseCase,
+        deleteNoteUseCase: deleteNoteUseCase,
+      ),
     );
   }
 }
