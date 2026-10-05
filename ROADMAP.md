@@ -6,17 +6,17 @@ This document breaks down the development of **Keeply Notes** into modular, atom
 
 ## 🏗 Phase 1: Project Setup & Encrypted Database Foundation
 
-- [ ] **Task 1.1: Flutter Project Initialization & Project Structure**
+- [x] **Task 1.1: Flutter Project Initialization & Project Structure**
   - Initialize Flutter app supporting Android and iOS.
   - Setup feature-first clean architecture directory layout (`lib/core/`, `lib/features/`).
   - Add core dependencies (`drift`, `sqflite_sqlcipher`, `flutter_secure_storage`, `uuid`, etc.) in `pubspec.yaml`.
 
-- [ ] **Task 1.2: Drift Database Schemas & Data Models**
+- [x] **Task 1.2: Drift Database Schemas & Data Models**
   - Define Drift tables: `Folders`, `Notes`, `Reminders`, `SubReminders`, and `Attachments`.
   - Configure foreign keys (with `ON DELETE CASCADE` for sub-reminders) and indices.
   - Run `build_runner` to generate Drift database code.
 
-- [ ] **Task 1.3: SQLCipher Disk Encryption & Database Wiring**
+- [x] **Task 1.3: SQLCipher Disk Encryption & Database Wiring**
   - Configure `sqflite_sqlcipher` database opener.
   - Implement secure database key generation and storage via `flutter_secure_storage`.
   - Verify database initialization and local encrypted storage.
@@ -25,11 +25,11 @@ This document breaks down the development of **Keeply Notes** into modular, atom
 
 ## 📁 Phase 2: Multilevel Folders & Folder Navigation
 
-- [ ] **Task 2.1: Folder Repository & Recursive CTE Queries**
+- [x] **Task 2.1: Folder Repository & Recursive CTE Queries**
   - Implement CRUD operations for folders in Drift.
   - Write recursive SQLite CTE query in Drift to retrieve all subfolders and notes within a folder subtree.
 
-- [ ] **Task 2.2: Folder Tree UI & Breadcrumb Navigation**
+- [x] **Task 2.2: Folder Tree UI & Breadcrumb Navigation**
   - Build minimalist UI for viewing and managing folder hierarchy.
   - Add breadcrumb navigation bar (`Home > Folder > Subfolder`).
   - Add folder creation, renaming, moving, and deletion dialogs.
