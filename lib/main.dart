@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/database/database_service.dart';
 import 'core/services/encryption_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/services/secure_storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
@@ -38,6 +39,14 @@ Future<void> main() async {
     // Surface a minimal error UI rather than a blank screen.
     runApp(const _DatabaseErrorApp());
     return;
+  }
+
+  // ── Bootstrap notification service & timezones ────────────────────────────
+  final notificationService = NotificationService();
+  try {
+    await notificationService.init();
+  } catch (e, st) {
+    AppLogger.error('Warning: could not initialize NotificationService', e, st);
   }
 
   final db = dbService.database;

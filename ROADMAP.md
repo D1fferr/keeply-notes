@@ -52,7 +52,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
 
 ## ⏰ Phase 4: Advanced Reminders & Sub-reminders Engine
 
-- [ ] **Task 4.1: Local Notifications Setup & Timezones**
+- [x] **Task 4.1: Local Notifications Setup & Timezones**
   - Integrate `flutter_local_notifications` and `timezone` packages.
   - Configure native notification channels for Android and permissions for iOS.
 
