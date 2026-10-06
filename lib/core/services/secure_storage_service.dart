@@ -33,6 +33,29 @@ class SecureStorageService {
     }
   }
 
+  /// Retrieves the existing attachment encryption key or generates a new 256-bit secure key.
+  Future<String> getOrCreateAttachmentKey() async {
+    try {
+      String? existingKey = await _storage.read(key: AppConstants.attachmentKeySecureStorageKey);
+      if (existingKey != null && existingKey.isNotEmpty) {
+        AppLogger.info('Retrieved existing attachment encryption key from SecureStorage');
+        return existingKey;
+      }
+
+      // Generate a new 256-bit (32 byte) secure random key
+      final random = Random.secure();
+      final keyBytes = List<int>.generate(32, (i) => random.nextInt(256));
+      final newKey = base64UrlEncode(keyBytes);
+
+      await _storage.write(key: AppConstants.attachmentKeySecureStorageKey, value: newKey);
+      AppLogger.info('Generated and stored new attachment encryption key in SecureStorage');
+      return newKey;
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to get/create attachment key in SecureStorage', e, stackTrace);
+      rethrow;
+    }
+  }
+
   /// Read a value from secure storage by key
   Future<String?> read(String key) async {
     return await _storage.read(key: key);
