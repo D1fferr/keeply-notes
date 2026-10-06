@@ -56,7 +56,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Integrate `flutter_local_notifications` and `timezone` packages.
   - Configure native notification channels for Android and permissions for iOS.
 
-- [ ] **Task 4.2: Primary Reminder Scheduling Engine**
+- [x] **Task 4.2: Primary Reminder Scheduling Engine**
   - Implement date recurrence calculator (`none`, `daily`, `weekly`, `monthly`, `yearly`, `custom_days`).
   - Build native notification scheduler for primary reminders.
   - Add Android boot receiver (`RECEIVE_BOOT_COMPLETED`) to reschedule notifications upon device reboot.
