@@ -6,7 +6,11 @@ class AppConstants {
 
   // Security & Encryption
   static const String dbKeySecureStorageKey = 'keeply_notes_db_encryption_key';
+  static const String attachmentKeySecureStorageKey = 'keeply_notes_attachment_encryption_key';
   static const String syncSalt = 'keeply_notes_e2ee_salt_v1';
+
+  // Attachments
+  static const String attachmentsDirectoryName = 'attachments';
 
   // Sub-reminders Limits
   static const int maxSubReminders = 10;

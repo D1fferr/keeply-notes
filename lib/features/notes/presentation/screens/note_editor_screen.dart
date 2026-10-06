@@ -1,18 +1,27 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/logger.dart';
+import '../../domain/attachment_entity.dart';
 import '../../domain/note_entity.dart';
+import '../../domain/usecases/attachment_usecases.dart';
 import '../../domain/usecases/note_crud_usecases.dart';
 import '../utils/quill_delta_helper.dart';
+import '../widgets/attachment_preview_bar.dart';
 import '../widgets/note_formatting_toolbar.dart';
 
-/// Full-screen rich text note editor.
+/// Full-screen rich text note editor with AES-256 encrypted media attachments.
 ///
 /// Features:
 /// - Title editing with large modern typography
 /// - WYSIWYG Delta-based rich text editing via `flutter_quill`
-/// - Custom minimalist formatting toolbar
+/// - Custom minimalist formatting toolbar with image attachment action
+/// - AES-256 encrypted image attachments (camera & gallery)
+/// - In-memory decrypted image preview rendering
+/// - Fullscreen zoomable image viewer with deletion
 /// - Pin/unpin toggle
 /// - Automatic save on exit if modified
 /// - Explicit save checkmark with feedback
@@ -26,6 +35,10 @@ class NoteEditorScreen extends StatefulWidget {
     required this.createNote,
     required this.updateNote,
     required this.deleteNote,
+    required this.saveAttachment,
+    required this.getDecryptedAttachmentBytes,
+    required this.watchNoteAttachments,
+    required this.deleteAttachment,
     this.onNoteSaved,
   });
 
@@ -42,6 +55,11 @@ class NoteEditorScreen extends StatefulWidget {
   final UpdateNoteUseCase updateNote;
   final DeleteNoteUseCase deleteNote;
 
+  final SaveAttachmentUseCase saveAttachment;
+  final GetDecryptedAttachmentBytesUseCase getDecryptedAttachmentBytes;
+  final WatchNoteAttachmentsUseCase watchNoteAttachments;
+  final DeleteAttachmentUseCase deleteAttachment;
+
   /// Optional callback invoked after a successful save.
   final void Function(NoteEntity savedNote)? onNoteSaved;
 
@@ -55,11 +73,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late final FocusNode _titleFocusNode;
   late final FocusNode _editorFocusNode;
   late final ScrollController _scrollController;
+  final ImagePicker _imagePicker = ImagePicker();
 
   NoteEntity? _currentNote;
   late bool _isPinned;
   bool _isSaving = false;
   bool _isDirty = false;
+
+  List<AttachmentEntity> _attachments = [];
+  StreamSubscription<List<AttachmentEntity>>? _attachmentsSub;
 
   @override
   void initState() {
@@ -82,12 +104,27 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _titleController.addListener(_onContentChanged);
     _quillController.addListener(_onContentChanged);
 
+    if (_currentNote != null) {
+      _subscribeToAttachments(_currentNote!.id);
+    }
+
     // Auto-focus title if creating a new note
     if (widget.note == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _titleFocusNode.requestFocus();
       });
     }
+  }
+
+  void _subscribeToAttachments(String noteId) {
+    _attachmentsSub?.cancel();
+    _attachmentsSub = widget.watchNoteAttachments(noteId).listen((items) {
+      if (mounted) {
+        setState(() {
+          _attachments = items;
+        });
+      }
+    });
   }
 
   void _onContentChanged() {
@@ -98,6 +135,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   @override
   void dispose() {
+    _attachmentsSub?.cancel();
     _titleController.removeListener(_onContentChanged);
     _quillController.removeListener(_onContentChanged);
     _titleController.dispose();
@@ -115,12 +153,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final isContentEmpty =
         QuillDeltaHelper.isDocumentEmpty(_quillController.document);
 
-    // If both title and content are empty, do not persist a blank note
-    if (title.isEmpty && isContentEmpty) {
+    // If both title and content are empty and no attachments, do not persist a blank note
+    if (title.isEmpty && isContentEmpty && _attachments.isEmpty) {
       return true;
     }
 
-    // Default title if user only entered body
+    // Default title if user only entered body or attached media
     final finalTitle = title.isEmpty ? 'Untitled Note' : title;
     final contentJson =
         QuillDeltaHelper.documentToJson(_quillController.document);
@@ -138,6 +176,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           isPinned: _isPinned,
         );
         _currentNote = created;
+        _subscribeToAttachments(created.id);
         AppLogger.info('NoteEditorScreen: created note ${created.id}');
         widget.onNoteSaved?.call(created);
       } else {
@@ -171,6 +210,118 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
   }
 
+  // ─── Image Picking & Encryption ───────────────────────────────────────────
+
+  void _showImageSourcePicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: AppColors.primaryWarmDark),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickAndAttachImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primaryWarmDark),
+                title: const Text('Take a Photo'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickAndAttachImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndAttachImage(ImageSource source) async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      // Ensure note exists in database before linking attachment
+      if (_currentNote == null) {
+        final success = await _saveNote();
+        if (!success || _currentNote == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please enter a note title before attaching images.')),
+            );
+          }
+          return;
+        }
+      }
+
+      final rawBytes = await pickedFile.readAsBytes();
+      final ext = p.extension(pickedFile.path).replaceAll('.', '');
+
+      await widget.saveAttachment(
+        noteId: _currentNote!.id,
+        rawBytes: rawBytes,
+        fileExtension: ext.isEmpty ? 'jpg' : ext,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image encrypted and attached'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e, st) {
+      AppLogger.error('NoteEditorScreen: failed to pick/attach image', e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not attach image: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteAttachment(AttachmentEntity attachment) async {
+    try {
+      await widget.deleteAttachment(attachment.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Attachment deleted'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e, st) {
+      AppLogger.error('NoteEditorScreen: delete attachment failed', e, st);
+    }
+  }
+
   // ─── Pin toggle ───────────────────────────────────────────────────────────
 
   void _togglePin() {
@@ -193,7 +344,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Note'),
         content: const Text(
-          'Are you sure you want to delete this note? It will be moved to trash.',
+          'Are you sure you want to delete this note and its attachments? It will be moved to trash.',
         ),
         actions: [
           TextButton(
@@ -300,6 +451,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       ),
                       const SizedBox(height: 8),
 
+                      // Attachments preview bar (if any)
+                      if (_attachments.isNotEmpty) ...[
+                        AttachmentPreviewBar(
+                          attachments: _attachments,
+                          getDecryptedAttachmentBytes: widget.getDecryptedAttachmentBytes,
+                          onDeleteAttachment: _deleteAttachment,
+                          onAddAttachment: _showImageSourcePicker,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
                       // Rich Text Editor
                       QuillEditor.basic(
                         controller: _quillController,
@@ -318,10 +480,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ),
             ),
 
-            // Rich Text Formatting Toolbar
+            // Rich Text Formatting Toolbar with Attach Image action
             SafeArea(
               top: false,
-              child: NoteFormattingToolbar(controller: _quillController),
+              child: NoteFormattingToolbar(
+                controller: _quillController,
+                onAddImage: _showImageSourcePicker,
+              ),
             ),
           ],
         ),
@@ -367,6 +532,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             )
           : null,
       actions: [
+        // Attach image action
+        IconButton(
+          icon: const Icon(Icons.add_photo_alternate_outlined),
+          tooltip: 'Attach Image',
+          onPressed: _showImageSourcePicker,
+        ),
+
         // Pin toggle button
         IconButton(
           icon: Icon(

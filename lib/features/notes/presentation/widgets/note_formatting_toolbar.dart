@@ -17,9 +17,11 @@ class NoteFormattingToolbar extends StatefulWidget {
   const NoteFormattingToolbar({
     super.key,
     required this.controller,
+    this.onAddImage,
   });
 
   final QuillController controller;
+  final VoidCallback? onAddImage;
 
   @override
   State<NoteFormattingToolbar> createState() => _NoteFormattingToolbarState();
@@ -192,6 +194,15 @@ class _NoteFormattingToolbarState extends State<NoteFormattingToolbar> {
               isActive: _isAttributeActive(Attribute.blockQuote),
               onPressed: () => _toggleAttribute(Attribute.blockQuote),
             ),
+            if (widget.onAddImage != null) ...[
+              const _ToolbarDivider(),
+              // Attach image
+              _ToolbarIconButton(
+                icon: Icons.add_photo_alternate_outlined,
+                tooltip: 'Attach Image',
+                onPressed: widget.onAddImage!,
+              ),
+            ],
           ],
         ),
       ),

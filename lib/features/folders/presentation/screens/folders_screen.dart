@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../notes/domain/note_entity.dart';
+import '../../../notes/domain/usecases/attachment_usecases.dart';
 import '../../../notes/domain/usecases/note_crud_usecases.dart';
 import '../../../notes/presentation/cubit/notes_cubit.dart';
 import '../../../notes/presentation/cubit/notes_state.dart';
@@ -30,6 +31,10 @@ class FoldersScreen extends StatefulWidget {
     required this.createNoteUseCase,
     required this.updateNoteUseCase,
     required this.deleteNoteUseCase,
+    required this.saveAttachmentUseCase,
+    required this.getDecryptedAttachmentBytesUseCase,
+    required this.watchNoteAttachmentsUseCase,
+    required this.deleteAttachmentUseCase,
   });
 
   final FolderCubit folderCubit;
@@ -37,6 +42,11 @@ class FoldersScreen extends StatefulWidget {
   final CreateNoteUseCase createNoteUseCase;
   final UpdateNoteUseCase updateNoteUseCase;
   final DeleteNoteUseCase deleteNoteUseCase;
+
+  final SaveAttachmentUseCase saveAttachmentUseCase;
+  final GetDecryptedAttachmentBytesUseCase getDecryptedAttachmentBytesUseCase;
+  final WatchNoteAttachmentsUseCase watchNoteAttachmentsUseCase;
+  final DeleteAttachmentUseCase deleteAttachmentUseCase;
 
   @override
   State<FoldersScreen> createState() => _FoldersScreenState();
@@ -97,6 +107,10 @@ class _FoldersScreenState extends State<FoldersScreen> {
           createNote: widget.createNoteUseCase,
           updateNote: widget.updateNoteUseCase,
           deleteNote: widget.deleteNoteUseCase,
+          saveAttachment: widget.saveAttachmentUseCase,
+          getDecryptedAttachmentBytes: widget.getDecryptedAttachmentBytesUseCase,
+          watchNoteAttachments: widget.watchNoteAttachmentsUseCase,
+          deleteAttachment: widget.deleteAttachmentUseCase,
         ),
       ),
     );

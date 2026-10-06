@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/database/database_service.dart';
+import 'core/services/encryption_service.dart';
 import 'core/services/secure_storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
@@ -11,17 +12,23 @@ import 'features/folders/domain/usecases/folder_crud_usecases.dart';
 import 'features/folders/domain/usecases/watch_folders_usecase.dart';
 import 'features/folders/presentation/cubit/folder_cubit.dart';
 import 'features/folders/presentation/screens/folders_screen.dart';
+import 'features/notes/data/datasources/attachment_local_data_source_impl.dart';
 import 'features/notes/data/datasources/note_local_data_source_impl.dart';
+import 'features/notes/data/repositories/attachment_repository_impl.dart';
 import 'features/notes/data/repositories/note_repository_impl.dart';
+import 'features/notes/domain/usecases/attachment_usecases.dart';
 import 'features/notes/domain/usecases/note_crud_usecases.dart';
 import 'features/notes/presentation/cubit/notes_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  final secureStorageService = SecureStorageService();
+  final encryptionService = const EncryptionService();
+
   // ── Bootstrap encrypted database ──────────────────────────────────────────
   final dbService = DatabaseService(
-    secureStorageService: SecureStorageService(),
+    secureStorageService: secureStorageService,
   );
 
   try {
@@ -68,12 +75,31 @@ Future<void> main() async {
     moveNote: moveNoteUseCase,
   );
 
+  // ── Wire up attachment feature (AES-256 disk encryption) ───────────────────
+  final attachmentDataSource = AttachmentLocalDataSourceImpl(db);
+  final attachmentRepository = AttachmentRepositoryImpl(
+    dataSource: attachmentDataSource,
+    encryptionService: encryptionService,
+    secureStorageService: secureStorageService,
+  );
+
+  final saveAttachmentUseCase = SaveAttachmentUseCase(attachmentRepository);
+  final getDecryptedAttachmentBytesUseCase =
+      GetDecryptedAttachmentBytesUseCase(attachmentRepository);
+  final watchNoteAttachmentsUseCase =
+      WatchNoteAttachmentsUseCase(attachmentRepository);
+  final deleteAttachmentUseCase = DeleteAttachmentUseCase(attachmentRepository);
+
   runApp(KeeplyNotesApp(
     folderCubit: folderCubit,
     notesCubit: notesCubit,
     createNoteUseCase: createNoteUseCase,
     updateNoteUseCase: updateNoteUseCase,
     deleteNoteUseCase: deleteNoteUseCase,
+    saveAttachmentUseCase: saveAttachmentUseCase,
+    getDecryptedAttachmentBytesUseCase: getDecryptedAttachmentBytesUseCase,
+    watchNoteAttachmentsUseCase: watchNoteAttachmentsUseCase,
+    deleteAttachmentUseCase: deleteAttachmentUseCase,
   ));
 }
 
@@ -87,6 +113,10 @@ class KeeplyNotesApp extends StatelessWidget {
     required this.createNoteUseCase,
     required this.updateNoteUseCase,
     required this.deleteNoteUseCase,
+    required this.saveAttachmentUseCase,
+    required this.getDecryptedAttachmentBytesUseCase,
+    required this.watchNoteAttachmentsUseCase,
+    required this.deleteAttachmentUseCase,
   });
 
   final FolderCubit folderCubit;
@@ -94,6 +124,11 @@ class KeeplyNotesApp extends StatelessWidget {
   final CreateNoteUseCase createNoteUseCase;
   final UpdateNoteUseCase updateNoteUseCase;
   final DeleteNoteUseCase deleteNoteUseCase;
+
+  final SaveAttachmentUseCase saveAttachmentUseCase;
+  final GetDecryptedAttachmentBytesUseCase getDecryptedAttachmentBytesUseCase;
+  final WatchNoteAttachmentsUseCase watchNoteAttachmentsUseCase;
+  final DeleteAttachmentUseCase deleteAttachmentUseCase;
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +144,10 @@ class KeeplyNotesApp extends StatelessWidget {
         createNoteUseCase: createNoteUseCase,
         updateNoteUseCase: updateNoteUseCase,
         deleteNoteUseCase: deleteNoteUseCase,
+        saveAttachmentUseCase: saveAttachmentUseCase,
+        getDecryptedAttachmentBytesUseCase: getDecryptedAttachmentBytesUseCase,
+        watchNoteAttachmentsUseCase: watchNoteAttachmentsUseCase,
+        deleteAttachmentUseCase: deleteAttachmentUseCase,
       ),
     );
   }
