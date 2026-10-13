@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/database/database_service.dart';
 import 'core/services/encryption_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/services/secure_storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
@@ -19,6 +20,9 @@ import 'features/notes/data/repositories/note_repository_impl.dart';
 import 'features/notes/domain/usecases/attachment_usecases.dart';
 import 'features/notes/domain/usecases/note_crud_usecases.dart';
 import 'features/notes/presentation/cubit/notes_cubit.dart';
+import 'features/reminders/data/datasources/reminder_local_data_source_impl.dart';
+import 'features/reminders/data/repositories/reminder_repository_impl.dart';
+import 'features/reminders/domain/usecases/reminder_usecases.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +42,14 @@ Future<void> main() async {
     // Surface a minimal error UI rather than a blank screen.
     runApp(const _DatabaseErrorApp());
     return;
+  }
+
+  // ── Bootstrap notification service & timezones ────────────────────────────
+  final notificationService = NotificationService();
+  try {
+    await notificationService.init();
+  } catch (e, st) {
+    AppLogger.error('Warning: could not initialize NotificationService', e, st);
   }
 
   final db = dbService.database;
@@ -90,6 +102,29 @@ Future<void> main() async {
       WatchNoteAttachmentsUseCase(attachmentRepository);
   final deleteAttachmentUseCase = DeleteAttachmentUseCase(attachmentRepository);
 
+  // ── Wire up reminder feature (Native alarm scheduling) ─────────────────────
+  final reminderDataSource = ReminderLocalDataSourceImpl(db);
+  final reminderRepository = ReminderRepositoryImpl(
+    dataSource: reminderDataSource,
+    notificationService: notificationService,
+  );
+
+  final watchReminderForNoteUseCase =
+      WatchReminderForNoteUseCase(reminderRepository);
+  final setReminderUseCase = SetReminderUseCase(reminderRepository);
+  final deleteReminderUseCase = DeleteReminderUseCase(reminderRepository);
+  final rescheduleAllRemindersUseCase =
+      RescheduleAllRemindersUseCase(reminderRepository);
+  final getSubRemindersUseCase = GetSubRemindersUseCase(reminderRepository);
+  final setSubRemindersUseCase = SetSubRemindersUseCase(reminderRepository);
+
+  // Reschedule active reminders on app startup (e.g. after reboot or process recreate)
+  try {
+    await rescheduleAllRemindersUseCase();
+  } catch (e, st) {
+    AppLogger.error('Failed to reschedule reminders on startup', e, st);
+  }
+
   runApp(KeeplyNotesApp(
     folderCubit: folderCubit,
     notesCubit: notesCubit,
@@ -100,6 +135,11 @@ Future<void> main() async {
     getDecryptedAttachmentBytesUseCase: getDecryptedAttachmentBytesUseCase,
     watchNoteAttachmentsUseCase: watchNoteAttachmentsUseCase,
     deleteAttachmentUseCase: deleteAttachmentUseCase,
+    watchReminderForNoteUseCase: watchReminderForNoteUseCase,
+    setReminderUseCase: setReminderUseCase,
+    deleteReminderUseCase: deleteReminderUseCase,
+    getSubRemindersUseCase: getSubRemindersUseCase,
+    setSubRemindersUseCase: setSubRemindersUseCase,
   ));
 }
 
@@ -117,6 +157,11 @@ class KeeplyNotesApp extends StatelessWidget {
     required this.getDecryptedAttachmentBytesUseCase,
     required this.watchNoteAttachmentsUseCase,
     required this.deleteAttachmentUseCase,
+    required this.watchReminderForNoteUseCase,
+    required this.setReminderUseCase,
+    required this.deleteReminderUseCase,
+    required this.getSubRemindersUseCase,
+    required this.setSubRemindersUseCase,
   });
 
   final FolderCubit folderCubit;
@@ -129,6 +174,12 @@ class KeeplyNotesApp extends StatelessWidget {
   final GetDecryptedAttachmentBytesUseCase getDecryptedAttachmentBytesUseCase;
   final WatchNoteAttachmentsUseCase watchNoteAttachmentsUseCase;
   final DeleteAttachmentUseCase deleteAttachmentUseCase;
+
+  final WatchReminderForNoteUseCase watchReminderForNoteUseCase;
+  final SetReminderUseCase setReminderUseCase;
+  final DeleteReminderUseCase deleteReminderUseCase;
+  final GetSubRemindersUseCase getSubRemindersUseCase;
+  final SetSubRemindersUseCase setSubRemindersUseCase;
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +199,11 @@ class KeeplyNotesApp extends StatelessWidget {
         getDecryptedAttachmentBytesUseCase: getDecryptedAttachmentBytesUseCase,
         watchNoteAttachmentsUseCase: watchNoteAttachmentsUseCase,
         deleteAttachmentUseCase: deleteAttachmentUseCase,
+        watchReminderForNoteUseCase: watchReminderForNoteUseCase,
+        setReminderUseCase: setReminderUseCase,
+        deleteReminderUseCase: deleteReminderUseCase,
+        getSubRemindersUseCase: getSubRemindersUseCase,
+        setSubRemindersUseCase: setSubRemindersUseCase,
       ),
     );
   }

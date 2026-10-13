@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../domain/note_entity.dart';
+import '../../reminders/domain/reminder_entity.dart';
 import '../utils/quill_delta_helper.dart';
 
 /// Card component rendering a single note item in list and grid views.
@@ -10,12 +11,15 @@ import '../utils/quill_delta_helper.dart';
 /// - Note title (bold)
 /// - Plain text snippet extracted from Delta JSON
 /// - Pinned status indicator
+/// - Active reminder indicator & scheduled time
 /// - Last modified timestamp
 /// - Context menu for pin, move, and delete actions
 class NoteCard extends StatelessWidget {
   const NoteCard({
     super.key,
     required this.note,
+    this.reminder,
+    this.reminderStream,
     required this.onTap,
     required this.onTogglePin,
     required this.onDelete,
@@ -23,6 +27,8 @@ class NoteCard extends StatelessWidget {
   });
 
   final NoteEntity note;
+  final ReminderEntity? reminder;
+  final Stream<ReminderEntity?>? reminderStream;
   final VoidCallback onTap;
   final VoidCallback onTogglePin;
   final VoidCallback onDelete;
@@ -82,6 +88,25 @@ class NoteCard extends StatelessWidget {
                       color: AppColors.primaryWarmDark,
                     ),
                   ],
+                  if (reminderStream != null || reminder != null)
+                    StreamBuilder<ReminderEntity?>(
+                      stream: reminderStream,
+                      initialData: reminder,
+                      builder: (context, snapshot) {
+                        final rem = snapshot.data;
+                        if (rem == null || !rem.isEnabled) {
+                          return const SizedBox.shrink();
+                        }
+                        return const Padding(
+                          padding: EdgeInsets.only(left: 6),
+                          child: Icon(
+                            Icons.notifications_active_rounded,
+                            size: 16,
+                            color: AppColors.reminderActive,
+                          ),
+                        );
+                      },
+                    ),
                   const SizedBox(width: 4),
                   InkWell(
                     borderRadius: BorderRadius.circular(16),
@@ -118,15 +143,54 @@ class NoteCard extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // Footer: Date
-              Text(
-                formattedDate,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark
-                      ? AppColors.textSecondaryDark.withOpacity(0.7)
-                      : AppColors.textHintLight,
-                ),
+              // Footer: Date & Reminder indicator
+              Row(
+                children: [
+                  Text(
+                    formattedDate,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppColors.textSecondaryDark.withOpacity(0.7)
+                          : AppColors.textHintLight,
+                    ),
+                  ),
+                  if (reminderStream != null || reminder != null)
+                    StreamBuilder<ReminderEntity?>(
+                      stream: reminderStream,
+                      initialData: reminder,
+                      builder: (context, snapshot) {
+                        final rem = snapshot.data;
+                        if (rem == null || !rem.isEnabled) {
+                          return const SizedBox.shrink();
+                        }
+                        final remFormatted = DateFormat('MMM d, HH:mm')
+                            .format(rem.startDateTime.toLocal());
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.alarm_rounded,
+                                size: 12,
+                                color: AppColors.reminderActive,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                remFormatted,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.reminderActive,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                ],
               ),
             ],
           ),

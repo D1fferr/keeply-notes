@@ -7,6 +7,7 @@ import '../../../notes/presentation/cubit/notes_cubit.dart';
 import '../../../notes/presentation/cubit/notes_state.dart';
 import '../../../notes/presentation/screens/note_editor_screen.dart';
 import '../../../notes/presentation/widgets/note_card.dart';
+import '../../../reminders/domain/usecases/reminder_usecases.dart';
 import '../../domain/folder_entity.dart';
 import '../cubit/folder_cubit.dart';
 import '../cubit/folder_state.dart';
@@ -34,7 +35,11 @@ class FoldersScreen extends StatefulWidget {
     required this.saveAttachmentUseCase,
     required this.getDecryptedAttachmentBytesUseCase,
     required this.watchNoteAttachmentsUseCase,
-    required this.deleteAttachmentUseCase,
+    this.watchReminderForNoteUseCase,
+    this.setReminderUseCase,
+    this.deleteReminderUseCase,
+    this.getSubRemindersUseCase,
+    this.setSubRemindersUseCase,
   });
 
   final FolderCubit folderCubit;
@@ -47,6 +52,12 @@ class FoldersScreen extends StatefulWidget {
   final GetDecryptedAttachmentBytesUseCase getDecryptedAttachmentBytesUseCase;
   final WatchNoteAttachmentsUseCase watchNoteAttachmentsUseCase;
   final DeleteAttachmentUseCase deleteAttachmentUseCase;
+
+  final WatchReminderForNoteUseCase? watchReminderForNoteUseCase;
+  final SetReminderUseCase? setReminderUseCase;
+  final DeleteReminderUseCase? deleteReminderUseCase;
+  final GetSubRemindersUseCase? getSubRemindersUseCase;
+  final SetSubRemindersUseCase? setSubRemindersUseCase;
 
   @override
   State<FoldersScreen> createState() => _FoldersScreenState();
@@ -111,6 +122,11 @@ class _FoldersScreenState extends State<FoldersScreen> {
           getDecryptedAttachmentBytes: widget.getDecryptedAttachmentBytesUseCase,
           watchNoteAttachments: widget.watchNoteAttachmentsUseCase,
           deleteAttachment: widget.deleteAttachmentUseCase,
+          watchReminderForNote: widget.watchReminderForNoteUseCase,
+          setReminder: widget.setReminderUseCase,
+          deleteReminder: widget.deleteReminderUseCase,
+          getSubReminders: widget.getSubRemindersUseCase,
+          setSubReminders: widget.setSubRemindersUseCase,
         ),
       ),
     );
@@ -258,6 +274,8 @@ class _FoldersScreenState extends State<FoldersScreen> {
                 return NoteCard(
                   key: ValueKey(note.id),
                   note: note,
+                  reminderStream:
+                      widget.watchReminderForNoteUseCase?.call(note.id),
                   onTap: () => _openNoteEditor(note: note),
                   onTogglePin: () => _notesCubit.togglePin(note.id),
                   onDelete: () => _notesCubit.deleteNote(note.id),

@@ -17,4 +17,15 @@ class AppConstants {
 
   // Folder Constants
   static const String rootFolderId = 'root';
+
+  // Notification Channels & Settings
+  static const String primaryReminderChannelId = 'keeply_reminders_channel';
+  static const String primaryReminderChannelName = 'Keeply Reminders';
+  static const String primaryReminderChannelDesc =
+      'Notifications for primary note reminders and scheduled tasks';
+
+  static const String subReminderChannelId = 'keeply_sub_reminders_channel';
+  static const String subReminderChannelName = 'Keeply Secondary Reminders';
+  static const String subReminderChannelDesc =
+      'Notifications for follow-up reminders and snooze alerts';
 }

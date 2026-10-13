@@ -9,6 +9,9 @@ import '../../domain/attachment_entity.dart';
 import '../../domain/note_entity.dart';
 import '../../domain/usecases/attachment_usecases.dart';
 import '../../domain/usecases/note_crud_usecases.dart';
+import '../../reminders/domain/reminder_entity.dart';
+import '../../reminders/domain/usecases/reminder_usecases.dart';
+import '../../reminders/presentation/widgets/reminder_picker_sheet.dart';
 import '../utils/quill_delta_helper.dart';
 import '../widgets/attachment_preview_bar.dart';
 import '../widgets/note_formatting_toolbar.dart';
@@ -23,6 +26,7 @@ import '../widgets/note_formatting_toolbar.dart';
 /// - In-memory decrypted image preview rendering
 /// - Fullscreen zoomable image viewer with deletion
 /// - Pin/unpin toggle
+/// - Primary reminder scheduling and recurrence configuration
 /// - Automatic save on exit if modified
 /// - Explicit save checkmark with feedback
 /// - Delete note action from context menu
@@ -39,6 +43,11 @@ class NoteEditorScreen extends StatefulWidget {
     required this.getDecryptedAttachmentBytes,
     required this.watchNoteAttachments,
     required this.deleteAttachment,
+    this.watchReminderForNote,
+    this.setReminder,
+    this.deleteReminder,
+    this.getSubReminders,
+    this.setSubReminders,
     this.onNoteSaved,
   });
 
@@ -59,6 +68,12 @@ class NoteEditorScreen extends StatefulWidget {
   final GetDecryptedAttachmentBytesUseCase getDecryptedAttachmentBytes;
   final WatchNoteAttachmentsUseCase watchNoteAttachments;
   final DeleteAttachmentUseCase deleteAttachment;
+
+  final WatchReminderForNoteUseCase? watchReminderForNote;
+  final SetReminderUseCase? setReminder;
+  final DeleteReminderUseCase? deleteReminder;
+  final GetSubRemindersUseCase? getSubReminders;
+  final SetSubRemindersUseCase? setSubReminders;
 
   /// Optional callback invoked after a successful save.
   final void Function(NoteEntity savedNote)? onNoteSaved;
@@ -83,6 +98,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   List<AttachmentEntity> _attachments = [];
   StreamSubscription<List<AttachmentEntity>>? _attachmentsSub;
 
+  ReminderEntity? _currentReminder;
+  StreamSubscription<ReminderEntity?>? _reminderSub;
+
   @override
   void initState() {
     super.initState();
@@ -106,6 +124,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     if (_currentNote != null) {
       _subscribeToAttachments(_currentNote!.id);
+      _subscribeToReminder(_currentNote!.id);
     }
 
     // Auto-focus title if creating a new note
@@ -127,6 +146,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     });
   }
 
+  void _subscribeToReminder(String noteId) {
+    if (widget.watchReminderForNote == null) return;
+    _reminderSub?.cancel();
+    _reminderSub = widget.watchReminderForNote!(noteId).listen((rem) {
+      if (mounted) {
+        setState(() {
+          _currentReminder = rem;
+        });
+      }
+    });
+  }
+
   void _onContentChanged() {
     if (!_isDirty) {
       setState(() => _isDirty = true);
@@ -136,6 +167,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   @override
   void dispose() {
     _attachmentsSub?.cancel();
+    _reminderSub?.cancel();
     _titleController.removeListener(_onContentChanged);
     _quillController.removeListener(_onContentChanged);
     _titleController.dispose();
@@ -177,6 +209,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         );
         _currentNote = created;
         _subscribeToAttachments(created.id);
+        _subscribeToReminder(created.id);
         AppLogger.info('NoteEditorScreen: created note ${created.id}');
         widget.onNoteSaved?.call(created);
       } else {
@@ -364,6 +397,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     if (confirmed == true && mounted) {
       try {
+        if (_currentReminder != null && widget.deleteReminder != null) {
+          await widget.deleteReminder!(_currentReminder!.id);
+        }
         await widget.deleteNote(_currentNote!.id);
         if (mounted) {
           Navigator.of(context).pop();
@@ -377,6 +413,98 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         }
       }
     }
+  }
+
+  // ─── Reminder Picker ───────────────────────────────────────────────────────
+
+  Future<void> _openReminderPicker() async {
+    if (widget.setReminder == null) return;
+
+    if (_currentNote == null) {
+      final saved = await _saveNote();
+      if (!saved || _currentNote == null) return;
+    }
+    if (!mounted) return;
+
+    List<SubReminderEntity> existingSubs = [];
+    if (_currentReminder != null && widget.getSubReminders != null) {
+      try {
+        existingSubs = await widget.getSubReminders!(_currentReminder!.id);
+      } catch (e) {
+        AppLogger.error('Failed to load sub-reminders', e);
+      }
+    }
+
+    if (!mounted) return;
+
+    await ReminderPickerSheet.show(
+      context: context,
+      existingReminder: _currentReminder,
+      existingSubReminders: existingSubs,
+      onSave: ({
+        required DateTime startDateTime,
+        required RepeatType repeatType,
+        int? customDaysInterval,
+        required bool isEnabled,
+        required List<SubReminderEntity> subReminders,
+      }) async {
+        try {
+          final savedReminder = await widget.setReminder!(
+            noteId: _currentNote!.id,
+            startDateTime: startDateTime,
+            repeatType: repeatType,
+            customDaysInterval: customDaysInterval,
+            isEnabled: isEnabled,
+            noteTitle: _titleController.text.trim().isNotEmpty
+                ? _titleController.text.trim()
+                : 'Note Reminder',
+          );
+
+          if (widget.setSubReminders != null) {
+            await widget.setSubReminders!(
+              reminderId: savedReminder.id,
+              subReminders: subReminders,
+              noteTitle: _titleController.text.trim().isNotEmpty
+                  ? _titleController.text.trim()
+                  : 'Note Reminder',
+            );
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Reminder & sub-reminders saved'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e, st) {
+          AppLogger.error('Failed to set reminder', e, st);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to set reminder: $e')),
+            );
+          }
+        }
+      },
+      onDelete: _currentReminder != null && widget.deleteReminder != null
+          ? () async {
+              try {
+                await widget.deleteReminder!(_currentReminder!.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Reminder removed'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } catch (e, st) {
+                AppLogger.error('Failed to delete reminder', e, st);
+              }
+            }
+          : null,
+    );
   }
 
   // ─── Navigation back interceptor ──────────────────────────────────────────
@@ -538,6 +666,27 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           tooltip: 'Attach Image',
           onPressed: _showImageSourcePicker,
         ),
+
+        // Reminder action button
+        if (widget.setReminder != null)
+          IconButton(
+            icon: Icon(
+              _currentReminder != null && _currentReminder!.isEnabled
+                  ? Icons.notifications_active_rounded
+                  : (_currentReminder != null
+                      ? Icons.notifications_off_outlined
+                      : Icons.notifications_none_rounded),
+              color: _currentReminder != null && _currentReminder!.isEnabled
+                  ? AppColors.reminderActive
+                  : (_currentReminder != null
+                      ? Colors.orangeAccent
+                      : (isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight)),
+            ),
+            tooltip: _currentReminder != null ? 'Edit reminder' : 'Set reminder',
+            onPressed: _openReminderPicker,
+          ),
 
         // Pin toggle button
         IconButton(
