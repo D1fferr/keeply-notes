@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/database/database_service.dart';
+import 'core/services/biometric_auth_service.dart';
 import 'core/services/encryption_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/secure_storage_service.dart';
+import 'core/services/session_manager.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
 import 'features/folders/data/datasources/folder_local_data_source_impl.dart';
@@ -118,6 +120,10 @@ Future<void> main() async {
   final getSubRemindersUseCase = GetSubRemindersUseCase(reminderRepository);
   final setSubRemindersUseCase = SetSubRemindersUseCase(reminderRepository);
 
+  // ── Bootstrap biometric security & session manager ─────────────────────────
+  final biometricAuthService = BiometricAuthService();
+  final sessionManager = SessionManager(authService: biometricAuthService);
+
   // Reschedule active reminders on app startup (e.g. after reboot or process recreate)
   try {
     await rescheduleAllRemindersUseCase();
@@ -140,6 +146,8 @@ Future<void> main() async {
     deleteReminderUseCase: deleteReminderUseCase,
     getSubRemindersUseCase: getSubRemindersUseCase,
     setSubRemindersUseCase: setSubRemindersUseCase,
+    sessionManager: sessionManager,
+    biometricAuthService: biometricAuthService,
   ));
 }
 
@@ -162,6 +170,8 @@ class KeeplyNotesApp extends StatelessWidget {
     required this.deleteReminderUseCase,
     required this.getSubRemindersUseCase,
     required this.setSubRemindersUseCase,
+    this.sessionManager,
+    this.biometricAuthService,
   });
 
   final FolderCubit folderCubit;
@@ -180,6 +190,9 @@ class KeeplyNotesApp extends StatelessWidget {
   final DeleteReminderUseCase deleteReminderUseCase;
   final GetSubRemindersUseCase getSubRemindersUseCase;
   final SetSubRemindersUseCase setSubRemindersUseCase;
+
+  final SessionManager? sessionManager;
+  final BiometricAuthService? biometricAuthService;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +217,8 @@ class KeeplyNotesApp extends StatelessWidget {
         deleteReminderUseCase: deleteReminderUseCase,
         getSubRemindersUseCase: getSubRemindersUseCase,
         setSubRemindersUseCase: setSubRemindersUseCase,
+        sessionManager: sessionManager,
+        biometricAuthService: biometricAuthService,
       ),
     );
   }

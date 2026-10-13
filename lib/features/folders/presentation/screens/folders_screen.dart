@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/services/biometric_auth_service.dart';
+import '../../../../core/services/session_manager.dart';
 import '../../../notes/domain/note_entity.dart';
 import '../../../notes/domain/usecases/attachment_usecases.dart';
 import '../../../notes/domain/usecases/note_crud_usecases.dart';
@@ -40,6 +42,8 @@ class FoldersScreen extends StatefulWidget {
     this.deleteReminderUseCase,
     this.getSubRemindersUseCase,
     this.setSubRemindersUseCase,
+    this.sessionManager,
+    this.biometricAuthService,
   });
 
   final FolderCubit folderCubit;
@@ -58,6 +62,9 @@ class FoldersScreen extends StatefulWidget {
   final DeleteReminderUseCase? deleteReminderUseCase;
   final GetSubRemindersUseCase? getSubRemindersUseCase;
   final SetSubRemindersUseCase? setSubRemindersUseCase;
+
+  final SessionManager? sessionManager;
+  final BiometricAuthService? biometricAuthService;
 
   @override
   State<FoldersScreen> createState() => _FoldersScreenState();

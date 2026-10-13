@@ -70,7 +70,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
 
 ## 🔒 Phase 5: Biometric Security & Protected Folders
 
-- [ ] **Task 5.1: Biometric Authentication & Session Manager**
+- [x] **Task 5.1: Biometric Authentication & Session Manager**
   - Integrate `local_auth` for Face ID / Touch ID / Fingerprint / System PIN authentication.
   - Implement `SessionManager` to track global biometric unlock states.
 
