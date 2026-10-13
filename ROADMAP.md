@@ -61,7 +61,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Build native notification scheduler for primary reminders.
   - Add Android boot receiver (`RECEIVE_BOOT_COMPLETED`) to reschedule notifications upon device reboot.
 
-- [ ] **Task 4.3: Secondary Sub-reminders Engine (Up to 10)**
+- [x] **Task 4.3: Secondary Sub-reminders Engine (Up to 10)**
   - Implement sub-reminder time calculator (`offset_minutes` & `exact_time`).
   - Schedule sub-reminders alongside primary reminder triggers.
   - Enforce cascading deletion/cancellation of sub-reminders when primary reminder is removed.

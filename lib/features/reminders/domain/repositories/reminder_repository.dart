@@ -39,4 +39,33 @@ abstract interface class ReminderRepository {
 
   /// Reschedules all active reminders (called upon app reboot or app bootstrap).
   Future<void> rescheduleAllActiveReminders();
+
+  // ─── Sub-reminders ──────────────────────────────────────────────────────────
+
+  /// Retrieves all sub-reminders associated with [reminderId].
+  Future<List<SubReminderEntity>> getSubReminders(String reminderId);
+
+  /// Real-time stream of all sub-reminders for [reminderId].
+  Stream<List<SubReminderEntity>> watchSubReminders(String reminderId);
+
+  /// Adds a single sub-reminder (enforcing max 10 sub-reminders per reminder)
+  /// and schedules its native notification if parent reminder is active.
+  Future<SubReminderEntity> addSubReminder({
+    required String reminderId,
+    required SubReminderType type,
+    int? offsetMinutes,
+    String? exactTime,
+    String? noteTitle,
+  });
+
+  /// Replaces all sub-reminders for [reminderId] with [subReminders] (enforcing max 10),
+  /// rescheduling native notifications accordingly.
+  Future<void> setSubRemindersForReminder({
+    required String reminderId,
+    required List<SubReminderEntity> subReminders,
+    String? noteTitle,
+  });
+
+  /// Cancels native notification and deletes a specific sub-reminder by [id].
+  Future<void> deleteSubReminder(String id);
 }

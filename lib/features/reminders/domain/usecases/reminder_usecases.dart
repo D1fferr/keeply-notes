@@ -79,3 +79,75 @@ class RescheduleAllRemindersUseCase {
 
   Future<void> call() => _repository.rescheduleAllActiveReminders();
 }
+
+// ─── Sub-reminders Use Cases ──────────────────────────────────────────────────
+
+/// Fetches all sub-reminders for a given reminder.
+class GetSubRemindersUseCase {
+  const GetSubRemindersUseCase(this._repository);
+
+  final ReminderRepository _repository;
+
+  Future<List<SubReminderEntity>> call(String reminderId) =>
+      _repository.getSubReminders(reminderId);
+}
+
+/// Watches real-time updates for a reminder's sub-reminders.
+class WatchSubRemindersUseCase {
+  const WatchSubRemindersUseCase(this._repository);
+
+  final ReminderRepository _repository;
+
+  Stream<List<SubReminderEntity>> call(String reminderId) =>
+      _repository.watchSubReminders(reminderId);
+}
+
+/// Adds a sub-reminder to a primary reminder.
+class AddSubReminderUseCase {
+  const AddSubReminderUseCase(this._repository);
+
+  final ReminderRepository _repository;
+
+  Future<SubReminderEntity> call({
+    required String reminderId,
+    required SubReminderType type,
+    int? offsetMinutes,
+    String? exactTime,
+    String? noteTitle,
+  }) =>
+      _repository.addSubReminder(
+        reminderId: reminderId,
+        type: type,
+        offsetMinutes: offsetMinutes,
+        exactTime: exactTime,
+        noteTitle: noteTitle,
+      );
+}
+
+/// Replaces all sub-reminders for a primary reminder.
+class SetSubRemindersUseCase {
+  const SetSubRemindersUseCase(this._repository);
+
+  final ReminderRepository _repository;
+
+  Future<void> call({
+    required String reminderId,
+    required List<SubReminderEntity> subReminders,
+    String? noteTitle,
+  }) =>
+      _repository.setSubRemindersForReminder(
+        reminderId: reminderId,
+        subReminders: subReminders,
+        noteTitle: noteTitle,
+      );
+}
+
+/// Deletes a sub-reminder by ID.
+class DeleteSubReminderUseCase {
+  const DeleteSubReminderUseCase(this._repository);
+
+  final ReminderRepository _repository;
+
+  Future<void> call(String id) => _repository.deleteSubReminder(id);
+}
+

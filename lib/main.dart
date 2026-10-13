@@ -115,6 +115,8 @@ Future<void> main() async {
   final deleteReminderUseCase = DeleteReminderUseCase(reminderRepository);
   final rescheduleAllRemindersUseCase =
       RescheduleAllRemindersUseCase(reminderRepository);
+  final getSubRemindersUseCase = GetSubRemindersUseCase(reminderRepository);
+  final setSubRemindersUseCase = SetSubRemindersUseCase(reminderRepository);
 
   // Reschedule active reminders on app startup (e.g. after reboot or process recreate)
   try {
@@ -136,6 +138,8 @@ Future<void> main() async {
     watchReminderForNoteUseCase: watchReminderForNoteUseCase,
     setReminderUseCase: setReminderUseCase,
     deleteReminderUseCase: deleteReminderUseCase,
+    getSubRemindersUseCase: getSubRemindersUseCase,
+    setSubRemindersUseCase: setSubRemindersUseCase,
   ));
 }
 
@@ -156,6 +160,8 @@ class KeeplyNotesApp extends StatelessWidget {
     required this.watchReminderForNoteUseCase,
     required this.setReminderUseCase,
     required this.deleteReminderUseCase,
+    required this.getSubRemindersUseCase,
+    required this.setSubRemindersUseCase,
   });
 
   final FolderCubit folderCubit;
@@ -172,6 +178,8 @@ class KeeplyNotesApp extends StatelessWidget {
   final WatchReminderForNoteUseCase watchReminderForNoteUseCase;
   final SetReminderUseCase setReminderUseCase;
   final DeleteReminderUseCase deleteReminderUseCase;
+  final GetSubRemindersUseCase getSubRemindersUseCase;
+  final SetSubRemindersUseCase setSubRemindersUseCase;
 
   @override
   Widget build(BuildContext context) {
@@ -194,6 +202,8 @@ class KeeplyNotesApp extends StatelessWidget {
         watchReminderForNoteUseCase: watchReminderForNoteUseCase,
         setReminderUseCase: setReminderUseCase,
         deleteReminderUseCase: deleteReminderUseCase,
+        getSubRemindersUseCase: getSubRemindersUseCase,
+        setSubRemindersUseCase: setSubRemindersUseCase,
       ),
     );
   }

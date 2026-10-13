@@ -35,10 +35,11 @@ class FoldersScreen extends StatefulWidget {
     required this.saveAttachmentUseCase,
     required this.getDecryptedAttachmentBytesUseCase,
     required this.watchNoteAttachmentsUseCase,
-    required this.deleteAttachmentUseCase,
     this.watchReminderForNoteUseCase,
     this.setReminderUseCase,
     this.deleteReminderUseCase,
+    this.getSubRemindersUseCase,
+    this.setSubRemindersUseCase,
   });
 
   final FolderCubit folderCubit;
@@ -55,6 +56,8 @@ class FoldersScreen extends StatefulWidget {
   final WatchReminderForNoteUseCase? watchReminderForNoteUseCase;
   final SetReminderUseCase? setReminderUseCase;
   final DeleteReminderUseCase? deleteReminderUseCase;
+  final GetSubRemindersUseCase? getSubRemindersUseCase;
+  final SetSubRemindersUseCase? setSubRemindersUseCase;
 
   @override
   State<FoldersScreen> createState() => _FoldersScreenState();
@@ -122,6 +125,8 @@ class _FoldersScreenState extends State<FoldersScreen> {
           watchReminderForNote: widget.watchReminderForNoteUseCase,
           setReminder: widget.setReminderUseCase,
           deleteReminder: widget.deleteReminderUseCase,
+          getSubReminders: widget.getSubRemindersUseCase,
+          setSubReminders: widget.setSubRemindersUseCase,
         ),
       ),
     );

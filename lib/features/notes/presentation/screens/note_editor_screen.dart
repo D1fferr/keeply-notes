@@ -46,6 +46,8 @@ class NoteEditorScreen extends StatefulWidget {
     this.watchReminderForNote,
     this.setReminder,
     this.deleteReminder,
+    this.getSubReminders,
+    this.setSubReminders,
     this.onNoteSaved,
   });
 
@@ -70,6 +72,8 @@ class NoteEditorScreen extends StatefulWidget {
   final WatchReminderForNoteUseCase? watchReminderForNote;
   final SetReminderUseCase? setReminder;
   final DeleteReminderUseCase? deleteReminder;
+  final GetSubRemindersUseCase? getSubReminders;
+  final SetSubRemindersUseCase? setSubReminders;
 
   /// Optional callback invoked after a successful save.
   final void Function(NoteEntity savedNote)? onNoteSaved;
@@ -422,17 +426,30 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
     if (!mounted) return;
 
+    List<SubReminderEntity> existingSubs = [];
+    if (_currentReminder != null && widget.getSubReminders != null) {
+      try {
+        existingSubs = await widget.getSubReminders!(_currentReminder!.id);
+      } catch (e) {
+        AppLogger.error('Failed to load sub-reminders', e);
+      }
+    }
+
+    if (!mounted) return;
+
     await ReminderPickerSheet.show(
       context: context,
       existingReminder: _currentReminder,
+      existingSubReminders: existingSubs,
       onSave: ({
         required DateTime startDateTime,
         required RepeatType repeatType,
         int? customDaysInterval,
         required bool isEnabled,
+        required List<SubReminderEntity> subReminders,
       }) async {
         try {
-          await widget.setReminder!(
+          final savedReminder = await widget.setReminder!(
             noteId: _currentNote!.id,
             startDateTime: startDateTime,
             repeatType: repeatType,
@@ -442,10 +459,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 ? _titleController.text.trim()
                 : 'Note Reminder',
           );
+
+          if (widget.setSubReminders != null) {
+            await widget.setSubReminders!(
+              reminderId: savedReminder.id,
+              subReminders: subReminders,
+              noteTitle: _titleController.text.trim().isNotEmpty
+                  ? _titleController.text.trim()
+                  : 'Note Reminder',
+            );
+          }
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Reminder saved'),
+                content: Text('Reminder & sub-reminders saved'),
                 duration: Duration(seconds: 2),
               ),
             );

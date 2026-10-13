@@ -110,4 +110,99 @@ class ReminderLocalDataSourceImpl implements ReminderLocalDataSource {
     await (_db.delete(_db.reminders)..where((r) => r.noteId.equals(noteId))).go();
     AppLogger.debug('ReminderLocalDataSource: deleted reminder for note $noteId');
   }
+
+  // ─── Sub-reminders ──────────────────────────────────────────────────────────
+
+  SubReminderEntity _toSubEntity(SubReminderData data) => SubReminderEntity(
+        id: data.id,
+        reminderId: data.reminderId,
+        type: SubReminderType.fromString(data.type),
+        offsetMinutes: data.offsetMinutes,
+        exactTime: data.exactTime,
+      );
+
+  @override
+  Future<List<SubReminderEntity>> getSubRemindersByReminderId(
+      String reminderId) async {
+    final rows = await (_db.select(_db.subReminders)
+          ..where((s) => s.reminderId.equals(reminderId)))
+        .get();
+    return rows.map(_toSubEntity).toList();
+  }
+
+  @override
+  Stream<List<SubReminderEntity>> watchSubRemindersByReminderId(
+      String reminderId) {
+    return (_db.select(_db.subReminders)
+          ..where((s) => s.reminderId.equals(reminderId)))
+        .watch()
+        .map((rows) => rows.map(_toSubEntity).toList());
+  }
+
+  @override
+  Future<SubReminderEntity> insertSubReminder({
+    required String id,
+    required String reminderId,
+    required String type,
+    int? offsetMinutes,
+    String? exactTime,
+  }) async {
+    final companion = SubRemindersCompanion(
+      id: Value(id),
+      reminderId: Value(reminderId),
+      type: Value(type),
+      offsetMinutes: Value(offsetMinutes),
+      exactTime: Value(exactTime),
+    );
+
+    await _db.into(_db.subReminders).insert(companion);
+    AppLogger.debug('ReminderLocalDataSource: inserted sub-reminder $id for reminder $reminderId');
+
+    return SubReminderEntity(
+      id: id,
+      reminderId: reminderId,
+      type: SubReminderType.fromString(type),
+      offsetMinutes: offsetMinutes,
+      exactTime: exactTime,
+    );
+  }
+
+  @override
+  Future<void> replaceSubReminders({
+    required String reminderId,
+    required List<SubReminderEntity> subReminders,
+  }) async {
+    await _db.transaction(() async {
+      await (_db.delete(_db.subReminders)
+            ..where((s) => s.reminderId.equals(reminderId)))
+          .go();
+
+      for (final sub in subReminders) {
+        await _db.into(_db.subReminders).insert(
+              SubRemindersCompanion(
+                id: Value(sub.id),
+                reminderId: Value(reminderId),
+                type: Value(sub.type.toDbString()),
+                offsetMinutes: Value(sub.offsetMinutes),
+                exactTime: Value(sub.exactTime),
+              ),
+            );
+      }
+    });
+    AppLogger.debug('ReminderLocalDataSource: replaced ${subReminders.length} sub-reminders for reminder $reminderId');
+  }
+
+  @override
+  Future<void> deleteSubReminder(String id) async {
+    await (_db.delete(_db.subReminders)..where((s) => s.id.equals(id))).go();
+    AppLogger.debug('ReminderLocalDataSource: deleted sub-reminder $id');
+  }
+
+  @override
+  Future<void> deleteSubRemindersByReminderId(String reminderId) async {
+    await (_db.delete(_db.subReminders)
+          ..where((s) => s.reminderId.equals(reminderId)))
+        .go();
+    AppLogger.debug('ReminderLocalDataSource: deleted sub-reminders for reminder $reminderId');
+  }
 }

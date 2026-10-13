@@ -210,5 +210,213 @@ void main() {
 
       expect(fakeNotifications.scheduledCalls.length, equals(1));
     });
+
+    group('Sub-reminders Engine (Task 4.3)', () {
+      test('addSubReminder schedules sub-notification with isSubReminder=true', () async {
+        final futureDate = DateTime.now().add(const Duration(days: 1));
+
+        final primary = await repository.setReminder(
+          noteId: noteId,
+          startDateTime: futureDate,
+          repeatType: RepeatType.none,
+          isEnabled: true,
+        );
+
+        fakeNotifications.scheduledCalls.clear();
+
+        final sub = await repository.addSubReminder(
+          reminderId: primary.id,
+          type: SubReminderType.offsetMinutes,
+          offsetMinutes: 15,
+        );
+
+        expect(sub.id, isNotEmpty);
+        expect(sub.reminderId, equals(primary.id));
+        expect(sub.offsetMinutes, equals(15));
+
+        // Verify sub-reminder notification was scheduled
+        expect(fakeNotifications.scheduledCalls.length, equals(1));
+        final call = fakeNotifications.scheduledCalls.first;
+        expect(call['isSubReminder'], isTrue);
+        expect(call['payload'], equals(noteId));
+        expect(call['body'], contains('+15 min'));
+      });
+
+      test('addSubReminder throws StateError when exceeding 10 sub-reminders', () async {
+        final futureDate = DateTime.now().add(const Duration(days: 1));
+
+        final primary = await repository.setReminder(
+          noteId: noteId,
+          startDateTime: futureDate,
+          repeatType: RepeatType.none,
+          isEnabled: true,
+        );
+
+        // Add 10 sub-reminders
+        for (int i = 1; i <= 10; i++) {
+          await repository.addSubReminder(
+            reminderId: primary.id,
+            type: SubReminderType.offsetMinutes,
+            offsetMinutes: i * 5,
+          );
+        }
+
+        final current = await repository.getSubReminders(primary.id);
+        expect(current.length, equals(10));
+
+        // 11th should throw
+        expect(
+          () => repository.addSubReminder(
+            reminderId: primary.id,
+            type: SubReminderType.offsetMinutes,
+            offsetMinutes: 60,
+          ),
+          throwsStateError,
+        );
+      });
+
+      test('setSubRemindersForReminder replaces and reschedules all sub-reminders', () async {
+        final futureDate = DateTime.now().add(const Duration(days: 1));
+
+        final primary = await repository.setReminder(
+          noteId: noteId,
+          startDateTime: futureDate,
+          repeatType: RepeatType.none,
+          isEnabled: true,
+        );
+
+        await repository.setSubRemindersForReminder(
+          reminderId: primary.id,
+          subReminders: [
+            SubReminderEntity(
+              id: 'sub-a',
+              reminderId: primary.id,
+              type: SubReminderType.offsetMinutes,
+              offsetMinutes: 10,
+            ),
+            SubReminderEntity(
+              id: 'sub-b',
+              reminderId: primary.id,
+              type: SubReminderType.exactTime,
+              exactTime: '22:00',
+            ),
+          ],
+        );
+
+        final subs = await repository.getSubReminders(primary.id);
+        expect(subs.length, equals(2));
+      });
+
+      test('cascading cancellation: disabling primary cancels all sub-reminders', () async {
+        final futureDate = DateTime.now().add(const Duration(days: 1));
+
+        final primary = await repository.setReminder(
+          noteId: noteId,
+          startDateTime: futureDate,
+          repeatType: RepeatType.daily,
+          isEnabled: true,
+        );
+
+        final sub = await repository.addSubReminder(
+          reminderId: primary.id,
+          type: SubReminderType.offsetMinutes,
+          offsetMinutes: 20,
+        );
+
+        fakeNotifications.cancelledIds.clear();
+
+        // Disabling primary reminder
+        await repository.toggleReminderEnabled(primary.id, false);
+
+        // Expect both primary and sub-reminder notification IDs were cancelled
+        expect(fakeNotifications.cancelledIds.length, greaterThanOrEqualTo(2));
+        final subNotifId = sub.id.hashCode & 0x7FFFFFFF;
+        expect(fakeNotifications.cancelledIds, contains(subNotifId));
+      });
+
+      test('cascading deletion: deleting primary cancels all sub-reminders and removes rows', () async {
+        final futureDate = DateTime.now().add(const Duration(days: 1));
+
+        final primary = await repository.setReminder(
+          noteId: noteId,
+          startDateTime: futureDate,
+          repeatType: RepeatType.daily,
+          isEnabled: true,
+        );
+
+        final sub = await repository.addSubReminder(
+          reminderId: primary.id,
+          type: SubReminderType.offsetMinutes,
+          offsetMinutes: 10,
+        );
+
+        fakeNotifications.cancelledIds.clear();
+
+        await repository.deleteReminder(primary.id);
+
+        final subNotifId = sub.id.hashCode & 0x7FFFFFFF;
+        expect(fakeNotifications.cancelledIds, contains(subNotifId));
+
+        final remainingSubs = await repository.getSubReminders(primary.id);
+        expect(remainingSubs, isEmpty);
+      });
+
+      test('deleteSubReminder cancels specific sub-notification and removes row', () async {
+        final futureDate = DateTime.now().add(const Duration(days: 1));
+
+        final primary = await repository.setReminder(
+          noteId: noteId,
+          startDateTime: futureDate,
+          repeatType: RepeatType.none,
+          isEnabled: true,
+        );
+
+        final sub = await repository.addSubReminder(
+          reminderId: primary.id,
+          type: SubReminderType.offsetMinutes,
+          offsetMinutes: 10,
+        );
+
+        fakeNotifications.cancelledIds.clear();
+
+        await repository.deleteSubReminder(sub.id);
+
+        final subNotifId = sub.id.hashCode & 0x7FFFFFFF;
+        expect(fakeNotifications.cancelledIds, contains(subNotifId));
+
+        final remaining = await repository.getSubReminders(primary.id);
+        expect(remaining, isEmpty);
+      });
+
+      test('watchSubReminders provides reactive updates', () async {
+        final futureDate = DateTime.now().add(const Duration(days: 1));
+
+        final primary = await repository.setReminder(
+          noteId: noteId,
+          startDateTime: futureDate,
+          repeatType: RepeatType.daily,
+        );
+
+        final stream = repository.watchSubReminders(primary.id);
+
+        expect(
+          stream,
+          emitsInOrder([
+            isEmpty,
+            hasLength(1),
+            isEmpty,
+          ]),
+        );
+
+        final sub = await repository.addSubReminder(
+          reminderId: primary.id,
+          type: SubReminderType.offsetMinutes,
+          offsetMinutes: 5,
+        );
+
+        await repository.deleteSubReminder(sub.id);
+      });
+    });
   });
 }
+

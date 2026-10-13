@@ -1,31 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../domain/reminder_entity.dart';
+import '../../domain/services/sub_reminder_calculator.dart';
 
-/// Modal bottom sheet allowing users to configure or remove a note's primary reminder.
+/// Modal bottom sheet allowing users to configure or remove a note's primary reminder
+/// and up to 10 secondary sub-reminders (offset minutes & exact time).
 ///
 /// Supports:
 /// - Quick presets (e.g. In 1 hour, Tomorrow morning)
 /// - Custom Date & Time picker
 /// - Recurrence options (`none`, `daily`, `weekly`, `monthly`, `yearly`, `customDays`)
 /// - Custom day interval input
+/// - Secondary sub-reminders list (up to 10) with offset and exact time options
 /// - Active/inactive toggle
-/// - Removal of existing reminder
+/// - Removal of existing reminder and all cascading sub-reminders
 class ReminderPickerSheet extends StatefulWidget {
   const ReminderPickerSheet({
     super.key,
     this.existingReminder,
+    this.existingSubReminders,
     required this.onSave,
     this.onDelete,
   });
 
   final ReminderEntity? existingReminder;
+  final List<SubReminderEntity>? existingSubReminders;
   final void Function({
     required DateTime startDateTime,
     required RepeatType repeatType,
     int? customDaysInterval,
     required bool isEnabled,
+    required List<SubReminderEntity> subReminders,
   }) onSave;
   final VoidCallback? onDelete;
 
@@ -33,11 +40,13 @@ class ReminderPickerSheet extends StatefulWidget {
   static Future<void> show({
     required BuildContext context,
     ReminderEntity? existingReminder,
+    List<SubReminderEntity>? existingSubReminders,
     required void Function({
       required DateTime startDateTime,
       required RepeatType repeatType,
       int? customDaysInterval,
       required bool isEnabled,
+      required List<SubReminderEntity> subReminders,
     }) onSave,
     VoidCallback? onDelete,
   }) {
@@ -54,6 +63,7 @@ class ReminderPickerSheet extends StatefulWidget {
         ),
         child: ReminderPickerSheet(
           existingReminder: existingReminder,
+          existingSubReminders: existingSubReminders,
           onSave: onSave,
           onDelete: onDelete,
         ),
@@ -71,11 +81,14 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
   late RepeatType _repeatType;
   late int _customDaysInterval;
   late bool _isEnabled;
+  late List<SubReminderEntity> _subReminders;
 
   @override
   void initState() {
     super.initState();
     final existing = widget.existingReminder;
+    _subReminders = List.from(widget.existingSubReminders ?? []);
+
     if (existing != null) {
       final local = existing.startDateTime.toLocal();
       _selectedDate = DateTime(local.year, local.month, local.day);
@@ -131,8 +144,183 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
     final target = DateTime.now().add(offset);
     setState(() {
       _selectedDate = DateTime(target.year, target.month, target.day);
-      _selectedTime = fixedTime ?? TimeOfDay(hour: target.hour, minute: target.minute);
+      _selectedTime =
+          fixedTime ?? TimeOfDay(hour: target.hour, minute: target.minute);
     });
+  }
+
+  void _removeSubReminder(int index) {
+    setState(() => _subReminders.removeAt(index));
+  }
+
+  void _addSubReminder(SubReminderType type,
+      {int? offsetMinutes, String? exactTime}) {
+    if (_subReminders.length >= SubReminderCalculator.maxSubReminders) return;
+
+    final newSub = SubReminderEntity(
+      id: const Uuid().v4(),
+      reminderId: widget.existingReminder?.id ?? '',
+      type: type,
+      offsetMinutes: offsetMinutes,
+      exactTime: exactTime,
+    );
+
+    setState(() => _subReminders.add(newSub));
+  }
+
+  Future<void> _showAddSubReminderPicker(BuildContext context) async {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.more_time_rounded,
+                    color: AppColors.primaryWarmDark,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Add Sub-reminder',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Quick offsets:',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ActionChip(
+                    label: const Text('+5 min'),
+                    onPressed: () {
+                      _addSubReminder(SubReminderType.offsetMinutes,
+                          offsetMinutes: 5);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  ActionChip(
+                    label: const Text('+10 min'),
+                    onPressed: () {
+                      _addSubReminder(SubReminderType.offsetMinutes,
+                          offsetMinutes: 10);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  ActionChip(
+                    label: const Text('+15 min'),
+                    onPressed: () {
+                      _addSubReminder(SubReminderType.offsetMinutes,
+                          offsetMinutes: 15);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  ActionChip(
+                    label: const Text('+30 min'),
+                    onPressed: () {
+                      _addSubReminder(SubReminderType.offsetMinutes,
+                          offsetMinutes: 30);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  ActionChip(
+                    label: const Text('+1 hour'),
+                    onPressed: () {
+                      _addSubReminder(SubReminderType.offsetMinutes,
+                          offsetMinutes: 60);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  ActionChip(
+                    label: const Text('10 min before'),
+                    onPressed: () {
+                      _addSubReminder(SubReminderType.offsetMinutes,
+                          offsetMinutes: -10);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  ActionChip(
+                    label: const Text('15 min before'),
+                    onPressed: () {
+                      _addSubReminder(SubReminderType.offsetMinutes,
+                          offsetMinutes: -15);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.access_time_rounded,
+                  color: AppColors.primaryWarmDark,
+                ),
+                title: const Text('Exact time of day'),
+                subtitle: const Text('e.g. 20:00 on the reminder day'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: const TimeOfDay(hour: 20, minute: 0),
+                  );
+                  if (picked != null) {
+                    final h = picked.hour.toString().padLeft(2, '0');
+                    final m = picked.minute.toString().padLeft(2, '0');
+                    _addSubReminder(SubReminderType.exactTime,
+                        exactTime: '$h:$m');
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _save() {
@@ -142,6 +330,7 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
       customDaysInterval:
           _repeatType == RepeatType.customDays ? _customDaysInterval : null,
       isEnabled: _isEnabled,
+      subReminders: _subReminders,
     );
     Navigator.of(context).pop();
   }
@@ -206,7 +395,8 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
               child: Row(
                 children: [
                   ActionChip(
-                    avatar: const Icon(Icons.hourglass_bottom_rounded, size: 16),
+                    avatar:
+                        const Icon(Icons.hourglass_bottom_rounded, size: 16),
                     label: const Text('In 1 hour'),
                     onPressed: () => _applyPreset(const Duration(hours: 1)),
                   ),
@@ -268,7 +458,8 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
                                 ),
                                 Text(
                                   dateStr,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                  style:
+                                      theme.textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -314,7 +505,8 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
                                 ),
                                 Text(
                                   timeStr,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                  style:
+                                      theme.textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -411,6 +603,103 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
                 ),
               ),
             ],
+            const SizedBox(height: 16),
+
+            // ── Sub-reminders Section (Up to 10) ──────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.darkCardBackground
+                    : AppColors.lightCardBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.black12,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.more_time_rounded,
+                        size: 18,
+                        color: AppColors.primaryWarmDark,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Sub-reminders (${_subReminders.length}/${SubReminderCalculator.maxSubReminders})',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_subReminders.length <
+                          SubReminderCalculator.maxSubReminders)
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.add_rounded, size: 16),
+                          label: const Text('Add'),
+                          onPressed: () => _showAddSubReminderPicker(context),
+                        ),
+                    ],
+                  ),
+                  if (_subReminders.isEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'No sub-reminders. Add secondary alerts (e.g. +10 min, +30 min).',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: List.generate(_subReminders.length, (index) {
+                        final sub = _subReminders[index];
+                        final label =
+                            SubReminderCalculator.formatDescription(sub);
+                        return Chip(
+                          backgroundColor: theme.colorScheme.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: isDark ? Colors.white24 : Colors.black12,
+                            ),
+                          ),
+                          avatar: Icon(
+                            sub.type == SubReminderType.exactTime
+                                ? Icons.access_time_rounded
+                                : Icons.snooze_rounded,
+                            size: 14,
+                            color: AppColors.primaryWarmDark,
+                          ),
+                          label: Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          deleteIcon:
+                              const Icon(Icons.close_rounded, size: 14),
+                          onDeleted: () => _removeSubReminder(index),
+                        );
+                      }),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
 
             // Active / Enabled toggle
@@ -419,8 +708,8 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
               title: const Text('Reminder active'),
               subtitle: Text(
                 _isEnabled
-                    ? 'Will ring at the scheduled time'
-                    : 'Paused / muted',
+                    ? 'Will ring at scheduled time along with all sub-reminders'
+                    : 'Paused / muted (sub-reminders also paused)',
                 style: theme.textTheme.bodySmall,
               ),
               value: _isEnabled,
@@ -452,7 +741,7 @@ class _ReminderPickerSheetState extends State<ReminderPickerSheet> {
                 icon: const Icon(Icons.delete_outline_rounded,
                     color: Colors.redAccent),
                 label: const Text(
-                  'Remove Reminder',
+                  'Remove Reminder & Sub-reminders',
                   style: TextStyle(color: Colors.redAccent),
                 ),
                 onPressed: () {
