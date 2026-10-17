@@ -12,12 +12,28 @@ class WatchNotesInFolderUseCase {
 }
 
 /// Watches all non-deleted notes across all folders.
+/// When [includeProtected] is `false`, notes inside protected folders are excluded.
 class WatchAllNotesUseCase {
   const WatchAllNotesUseCase(this._repository);
 
   final NoteRepository _repository;
 
-  Stream<List<NoteEntity>> call() => _repository.watchAllNotes();
+  Stream<List<NoteEntity>> call({bool includeProtected = true}) =>
+      _repository.watchAllNotes(includeProtected: includeProtected);
+}
+
+/// Searches non-deleted notes by title or content.
+/// When [includeProtected] is `false`, notes inside protected folders are excluded.
+class SearchNotesUseCase {
+  const SearchNotesUseCase(this._repository);
+
+  final NoteRepository _repository;
+
+  Future<List<NoteEntity>> call(
+    String query, {
+    bool includeProtected = true,
+  }) =>
+      _repository.searchNotes(query, includeProtected: includeProtected);
 }
 
 /// Fetches a single note by its ID.

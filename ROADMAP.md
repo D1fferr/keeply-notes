@@ -74,7 +74,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Integrate `local_auth` for Face ID / Touch ID / Fingerprint / System PIN authentication.
   - Implement `SessionManager` to track global biometric unlock states.
 
-- [ ] **Task 5.2: Protected Folders UI & Access Control**
+- [x] **Task 5.2: Protected Folders UI & Access Control**
   - Add folder lock toggle and 🔒 status indicator.
   - Filter out notes in protected folders from general note lists and global search when locked.
   - Prompt biometric unlock when tapping to open a protected folder.

@@ -46,15 +46,96 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
   }
 
   @override
-  Stream<List<NoteEntity>> watchAllNotes() {
-    final query = _db.select(_db.notes)
-      ..where((n) => n.isDeleted.equals(false))
-      ..orderBy([
-        (n) => OrderingTerm.desc(n.isPinned),
-        (n) => OrderingTerm.desc(n.updatedAt),
-      ]);
+  Stream<List<NoteEntity>> watchAllNotes({bool includeProtected = true}) {
+    if (includeProtected) {
+      final query = _db.select(_db.notes)
+        ..where((n) => n.isDeleted.equals(false))
+        ..orderBy([
+          (n) => OrderingTerm.desc(n.isPinned),
+          (n) => OrderingTerm.desc(n.updatedAt),
+        ]);
 
-    return query.watch().map((rows) => rows.map(_toEntity).toList());
+      return query.watch().map((rows) => rows.map(_toEntity).toList());
+    }
+
+    // Exclude notes that belong to protected folders or their subtrees.
+    const sql = '''
+      WITH RECURSIVE ProtectedSubtree(id) AS (
+        SELECT id FROM folders WHERE is_protected = 1 AND is_deleted = 0
+        UNION ALL
+        SELECT f.id FROM folders f
+        INNER JOIN ProtectedSubtree ps ON f.parent_id = ps.id
+        WHERE f.is_deleted = 0
+      )
+      SELECT notes.* FROM notes
+      WHERE notes.is_deleted = 0
+        AND (notes.folder_id IS NULL
+             OR notes.folder_id NOT IN (SELECT id FROM ProtectedSubtree))
+      ORDER BY notes.is_pinned DESC, notes.updated_at DESC
+    ''';
+
+    return _db
+        .customSelect(sql, readsFrom: {_db.notes, _db.folders})
+        .watch()
+        .map((rows) => rows.map((row) {
+              final data = _db.notes.map(row.data);
+              return _toEntity(data);
+            }).toList());
+  }
+
+  @override
+  Future<List<NoteEntity>> searchNotes(
+    String query, {
+    bool includeProtected = true,
+  }) async {
+    final pattern = '%${query.toLowerCase()}%';
+
+    if (includeProtected) {
+      const sql = '''
+        SELECT * FROM notes
+        WHERE is_deleted = 0
+          AND (LOWER(title) LIKE ?1 OR LOWER(content_json) LIKE ?1)
+        ORDER BY is_pinned DESC, updated_at DESC
+      ''';
+
+      final rows = await _db.customSelect(
+        sql,
+        variables: [Variable.withString(pattern)],
+        readsFrom: {_db.notes},
+      ).get();
+
+      return rows.map((row) {
+        final data = _db.notes.map(row.data);
+        return _toEntity(data);
+      }).toList();
+    }
+
+    const sql = '''
+      WITH RECURSIVE ProtectedSubtree(id) AS (
+        SELECT id FROM folders WHERE is_protected = 1 AND is_deleted = 0
+        UNION ALL
+        SELECT f.id FROM folders f
+        INNER JOIN ProtectedSubtree ps ON f.parent_id = ps.id
+        WHERE f.is_deleted = 0
+      )
+      SELECT notes.* FROM notes
+      WHERE notes.is_deleted = 0
+        AND (LOWER(notes.title) LIKE ?1 OR LOWER(notes.content_json) LIKE ?1)
+        AND (notes.folder_id IS NULL
+             OR notes.folder_id NOT IN (SELECT id FROM ProtectedSubtree))
+      ORDER BY notes.is_pinned DESC, notes.updated_at DESC
+    ''';
+
+    final rows = await _db.customSelect(
+      sql,
+      variables: [Variable.withString(pattern)],
+      readsFrom: {_db.notes, _db.folders},
+    ).get();
+
+    return rows.map((row) {
+      final data = _db.notes.map(row.data);
+      return _toEntity(data);
+    }).toList();
   }
 
   // ─── Queries ─────────────────────────────────────────────────────────────

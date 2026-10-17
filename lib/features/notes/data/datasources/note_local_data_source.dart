@@ -11,7 +11,15 @@ abstract interface class NoteLocalDataSource {
   Stream<List<NoteEntity>> watchNotesInFolder(String? folderId);
 
   /// Emits all non-deleted notes across all folders.
-  Stream<List<NoteEntity>> watchAllNotes();
+  /// When [includeProtected] is `false`, notes inside protected folders or their subfolders are omitted.
+  Stream<List<NoteEntity>> watchAllNotes({bool includeProtected = true});
+
+  /// Searches non-deleted notes by title or content.
+  /// When [includeProtected] is `false`, notes inside protected folders or their subfolders are omitted.
+  Future<List<NoteEntity>> searchNotes(
+    String query, {
+    bool includeProtected = true,
+  });
 
   // ─── Queries ─────────────────────────────────────────────────────────────
 

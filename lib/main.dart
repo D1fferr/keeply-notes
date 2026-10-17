@@ -81,6 +81,7 @@ Future<void> main() async {
   final togglePinNoteUseCase = TogglePinNoteUseCase(noteRepository);
   final moveNoteUseCase = MoveNoteUseCase(noteRepository);
   final watchNotesInFolderUseCase = WatchNotesInFolderUseCase(noteRepository);
+  final searchNotesUseCase = SearchNotesUseCase(noteRepository);
 
   final notesCubit = NotesCubit(
     watchNotesInFolder: watchNotesInFolderUseCase,
@@ -146,6 +147,7 @@ Future<void> main() async {
     deleteReminderUseCase: deleteReminderUseCase,
     getSubRemindersUseCase: getSubRemindersUseCase,
     setSubRemindersUseCase: setSubRemindersUseCase,
+    searchNotesUseCase: searchNotesUseCase,
     sessionManager: sessionManager,
     biometricAuthService: biometricAuthService,
   ));
@@ -170,6 +172,7 @@ class KeeplyNotesApp extends StatelessWidget {
     required this.deleteReminderUseCase,
     required this.getSubRemindersUseCase,
     required this.setSubRemindersUseCase,
+    this.searchNotesUseCase,
     this.sessionManager,
     this.biometricAuthService,
   });
@@ -191,6 +194,7 @@ class KeeplyNotesApp extends StatelessWidget {
   final GetSubRemindersUseCase getSubRemindersUseCase;
   final SetSubRemindersUseCase setSubRemindersUseCase;
 
+  final SearchNotesUseCase? searchNotesUseCase;
   final SessionManager? sessionManager;
   final BiometricAuthService? biometricAuthService;
 
@@ -217,6 +221,7 @@ class KeeplyNotesApp extends StatelessWidget {
         deleteReminderUseCase: deleteReminderUseCase,
         getSubRemindersUseCase: getSubRemindersUseCase,
         setSubRemindersUseCase: setSubRemindersUseCase,
+        searchNotesUseCase: searchNotesUseCase,
         sessionManager: sessionManager,
         biometricAuthService: biometricAuthService,
       ),

@@ -18,7 +18,15 @@ class NoteRepositoryImpl implements NoteRepository {
       _dataSource.watchNotesInFolder(folderId);
 
   @override
-  Stream<List<NoteEntity>> watchAllNotes() => _dataSource.watchAllNotes();
+  Stream<List<NoteEntity>> watchAllNotes({bool includeProtected = true}) =>
+      _dataSource.watchAllNotes(includeProtected: includeProtected);
+
+  @override
+  Future<List<NoteEntity>> searchNotes(
+    String query, {
+    bool includeProtected = true,
+  }) =>
+      _dataSource.searchNotes(query, includeProtected: includeProtected);
 
   @override
   Future<NoteEntity?> getNoteById(String id) => _dataSource.getNoteById(id);
