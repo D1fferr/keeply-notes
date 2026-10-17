@@ -14,7 +14,15 @@ abstract interface class NoteRepository {
   Stream<List<NoteEntity>> watchNotesInFolder(String? folderId);
 
   /// Returns a real-time stream of all non-deleted notes across all folders.
-  Stream<List<NoteEntity>> watchAllNotes();
+  /// When [includeProtected] is `false`, notes inside protected folders are excluded.
+  Stream<List<NoteEntity>> watchAllNotes({bool includeProtected = true});
+
+  /// Searches non-deleted notes by title or content.
+  /// When [includeProtected] is `false`, notes inside protected folders are excluded.
+  Future<List<NoteEntity>> searchNotes(
+    String query, {
+    bool includeProtected = true,
+  });
 
   /// Fetches a single note by its [id]. Returns `null` when not found.
   Future<NoteEntity?> getNoteById(String id);

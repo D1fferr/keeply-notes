@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/services/biometric_auth_service.dart';
+import '../../../../core/services/session_manager.dart';
 import '../../../notes/domain/note_entity.dart';
 import '../../../notes/domain/usecases/attachment_usecases.dart';
 import '../../../notes/domain/usecases/note_crud_usecases.dart';
 import '../../../notes/presentation/cubit/notes_cubit.dart';
 import '../../../notes/presentation/cubit/notes_state.dart';
+import '../../../notes/presentation/delegates/note_search_delegate.dart';
 import '../../../notes/presentation/screens/note_editor_screen.dart';
 import '../../../notes/presentation/widgets/note_card.dart';
 import '../../../reminders/domain/usecases/reminder_usecases.dart';
@@ -40,6 +43,9 @@ class FoldersScreen extends StatefulWidget {
     this.deleteReminderUseCase,
     this.getSubRemindersUseCase,
     this.setSubRemindersUseCase,
+    this.searchNotesUseCase,
+    this.sessionManager,
+    this.biometricAuthService,
   });
 
   final FolderCubit folderCubit;
@@ -59,6 +65,10 @@ class FoldersScreen extends StatefulWidget {
   final GetSubRemindersUseCase? getSubRemindersUseCase;
   final SetSubRemindersUseCase? setSubRemindersUseCase;
 
+  final SearchNotesUseCase? searchNotesUseCase;
+  final SessionManager? sessionManager;
+  final BiometricAuthService? biometricAuthService;
+
   @override
   State<FoldersScreen> createState() => _FoldersScreenState();
 }
@@ -74,6 +84,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
     super.initState();
     _folderCubit.addListener(_onFolderStateChanged);
     _notesCubit.addListener(_onNotesStateChanged);
+    widget.sessionManager?.addListener(_onSessionStateChanged);
   }
 
   void _onFolderStateChanged() {
@@ -91,11 +102,94 @@ class _FoldersScreenState extends State<FoldersScreen> {
     if (mounted) setState(() {});
   }
 
+  void _onSessionStateChanged() {
+    if (!mounted) return;
+    final session = widget.sessionManager;
+    if (session != null && !session.isUnlocked) {
+      // If the session was locked while viewing a protected folder or its subfolders,
+      // navigate back to root so protected content is not left visible.
+      final state = _folderCubit.state;
+      if (state is FolderLoaded && state.breadcrumb.length > 1) {
+        _folderCubit.navigateToBreadcrumb(0);
+      }
+    }
+    setState(() {});
+  }
+
   @override
   void dispose() {
     _folderCubit.removeListener(_onFolderStateChanged);
     _notesCubit.removeListener(_onNotesStateChanged);
+    widget.sessionManager?.removeListener(_onSessionStateChanged);
     super.dispose();
+  }
+
+  // ─── Protected Folder Access Control ──────────────────────────────────────
+
+  /// Opens a folder, prompting biometric authentication first if it is protected
+  /// and the session is currently locked.
+  Future<void> _openFolderWithProtectionCheck(FolderEntity folder) async {
+    if (!folder.isProtected) {
+      _folderCubit.openFolder(folder);
+      return;
+    }
+
+    final session = widget.sessionManager;
+    if (session != null && session.isUnlocked) {
+      // Already authenticated in this session
+      _folderCubit.openFolder(folder);
+      return;
+    }
+
+    if (session == null) {
+      // No session manager available — allow access (graceful fallback)
+      _folderCubit.openFolder(folder);
+      return;
+    }
+
+    // Prompt biometric authentication
+    final success = await session.authenticateAndUnlock(
+      localizedReason: 'Authenticate to access "${folder.name}"',
+    );
+
+    if (success && mounted) {
+      _folderCubit.openFolder(folder);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication required to access this folder'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Handles toggle protection, requiring biometric auth to unlock a protected folder.
+  Future<void> _handleToggleProtection(FolderEntity folder) async {
+    if (folder.isProtected) {
+      // Removing protection: require biometric first
+      final session = widget.sessionManager;
+      if (session != null && !session.isUnlocked) {
+        final success = await session.authenticateAndUnlock(
+          localizedReason: 'Authenticate to remove protection from "${folder.name}"',
+        );
+        if (!success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Authentication required to remove folder protection'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+
+    if (mounted) {
+      FolderDialogs.showToggleProtection(context, _folderCubit, folder);
+    }
   }
 
   // ─── Note Editor Navigation ───────────────────────────────────────────────
@@ -166,9 +260,43 @@ class _FoldersScreenState extends State<FoldersScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.search_rounded),
-          onPressed: () {},
-          tooltip: 'Search (coming soon)',
+          onPressed: widget.searchNotesUseCase != null
+              ? () {
+                  showSearch(
+                    context: context,
+                    delegate: NoteSearchDelegate(
+                      searchNotesUseCase: widget.searchNotesUseCase!,
+                      sessionManager: widget.sessionManager,
+                      onNoteSelected: (note) => _openNoteEditor(note: note),
+                    ),
+                  );
+                }
+              : null,
+          tooltip: 'Search notes',
         ),
+        if (widget.sessionManager != null)
+          IconButton(
+            icon: Icon(
+              widget.sessionManager!.isUnlocked
+                  ? Icons.lock_open_rounded
+                  : Icons.lock_outline_rounded,
+              color: widget.sessionManager!.isUnlocked
+                  ? AppColors.protectedLock
+                  : null,
+            ),
+            tooltip: widget.sessionManager!.isUnlocked
+                ? 'Session unlocked (tap to lock)'
+                : 'Session locked (tap to unlock)',
+            onPressed: () async {
+              if (widget.sessionManager!.isUnlocked) {
+                widget.sessionManager!.lock();
+              } else {
+                await widget.sessionManager!.authenticateAndUnlock(
+                  localizedReason: 'Authenticate to access protected content',
+                );
+              }
+            },
+          ),
       ],
       bottom: _buildBreadcrumbBottom(context),
     );
@@ -237,13 +365,12 @@ class _FoldersScreenState extends State<FoldersScreen> {
                 return FolderListTile(
                   key: ValueKey(folder.id),
                   folder: folder,
-                  onTap: () => _folderCubit.openFolder(folder),
+                  onTap: () => _openFolderWithProtectionCheck(folder),
                   onRename: () =>
                       FolderDialogs.showRename(context, _folderCubit, folder),
                   onMove: () =>
                       FolderDialogs.showMoveToRoot(context, _folderCubit, folder),
-                  onToggleProtection: () => FolderDialogs.showToggleProtection(
-                      context, _folderCubit, folder),
+                  onToggleProtection: () => _handleToggleProtection(folder),
                   onDelete: () =>
                       FolderDialogs.showDelete(context, _folderCubit, folder),
                 );
