@@ -87,7 +87,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Integrate `google_sign_in` requesting `appDataFolder` scope.
   - Implement authentication state management and token refresh handlers.
 
-- [ ] **Task 6.2: E2EE Key Derivation Engine (HKDF)**
+- [x] **Task 6.2: E2EE Key Derivation Engine (HKDF)**
   - Implement `HKDF-SHA256` key generator using `Google User ID` + App Salt.
   - Build `AES-256-GCM` encryption/decryption utility for sync payloads.
 
