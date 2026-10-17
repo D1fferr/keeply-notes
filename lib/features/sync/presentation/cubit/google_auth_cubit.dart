@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../../../core/utils/logger.dart';
 import '../../domain/entities/google_user_entity.dart';
+import '../../domain/entities/sync_result_entity.dart';
 import '../../domain/repositories/google_auth_repository.dart';
+import '../../data/services/drive_sync_service.dart';
 import 'google_auth_state.dart';
 
 /// Cubit managing Google Authentication lifecycle, silent session restoration,
@@ -10,8 +12,10 @@ import 'google_auth_state.dart';
 class GoogleAuthCubit extends ChangeNotifier {
   GoogleAuthCubit({
     required GoogleAuthRepository authRepository,
+    DriveSyncService? driveSyncService,
     bool autoInitialize = true,
-  }) : _authRepository = authRepository {
+  })  : _authRepository = authRepository,
+        _driveSyncService = driveSyncService {
     _authSubscription = _authRepository.authStateChanges.listen(_onAuthStateChanged);
 
     if (autoInitialize) {
@@ -20,6 +24,7 @@ class GoogleAuthCubit extends ChangeNotifier {
   }
 
   final GoogleAuthRepository _authRepository;
+  final DriveSyncService? _driveSyncService;
   StreamSubscription<GoogleUserEntity?>? _authSubscription;
 
   GoogleAuthState _state = const GoogleAuthInitial();
@@ -27,6 +32,12 @@ class GoogleAuthCubit extends ChangeNotifier {
 
   GoogleUserEntity? get currentUser => _authRepository.currentUser;
   bool get isSignedIn => _authRepository.isSignedIn;
+
+  bool _isSyncing = false;
+  bool get isSyncing => _isSyncing;
+
+  DriveSyncResult? _lastSyncResult;
+  DriveSyncResult? get lastSyncResult => _lastSyncResult;
 
   void _onAuthStateChanged(GoogleUserEntity? user) {
     if (user != null) {
@@ -109,6 +120,31 @@ class GoogleAuthCubit extends ChangeNotifier {
       AppLogger.info('GoogleAuthCubit: tokens refreshed successfully');
     } catch (e, st) {
       AppLogger.error('GoogleAuthCubit: failed to refresh token', e, st);
+    }
+  }
+
+  /// Triggers an immediate bidirectional synchronization cycle with Google Drive.
+  Future<DriveSyncResult?> syncNow() async {
+    if (_driveSyncService == null) {
+      AppLogger.warn('GoogleAuthCubit: syncNow called but DriveSyncService is not configured');
+      return null;
+    }
+
+    if (!isSignedIn) {
+      AppLogger.warn('GoogleAuthCubit: syncNow called while unauthenticated');
+      return DriveSyncResult.failure('User is not signed in');
+    }
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      final result = await _driveSyncService!.syncAll();
+      _lastSyncResult = result;
+      return result;
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
     }
   }
 

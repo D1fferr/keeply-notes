@@ -91,7 +91,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Implement `HKDF-SHA256` key generator using `Google User ID` + App Salt.
   - Build `AES-256-GCM` encryption/decryption utility for sync payloads.
 
-- [ ] **Task 6.3: Item-Level Sync Engine (Last-Write-Wins)**
+- [x] **Task 6.3: Item-Level Sync Engine (Last-Write-Wins)**
   - Build `DriveSyncService` to upload and download encrypted `.enc` item blobs to Google Drive `appDataFolder`.
   - Implement Last-Write-Wins (LWW) conflict resolution strategy using UTC `updatedAt` timestamps and tombstone deletion flags.
   - Implement media attachment sync to Google Drive.

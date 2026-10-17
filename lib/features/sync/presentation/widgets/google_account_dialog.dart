@@ -217,6 +217,68 @@ class _GoogleAccountDialogState extends State<GoogleAccountDialog> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 8),
+        // Sync metrics and instant trigger
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.authCubit.isSyncing
+                        ? 'Synchronizing...'
+                        : widget.authCubit.lastSyncResult != null
+                            ? widget.authCubit.lastSyncResult!.success
+                                ? widget.authCubit.lastSyncResult!.totalChanges > 0
+                                    ? 'Synced: ↑${widget.authCubit.lastSyncResult!.totalUploaded} ↓${widget.authCubit.lastSyncResult!.totalDownloaded}'
+                                    : 'All items are up to date'
+                                : 'Sync error: ${widget.authCubit.lastSyncResult!.errorMessage}'
+                            : 'Ready to sync',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: widget.authCubit.lastSyncResult?.success == false
+                          ? Colors.red
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  if (widget.authCubit.lastSyncResult != null)
+                    Text(
+                      'Last: ${widget.authCubit.lastSyncResult!.syncedAt.toLocal().toString().substring(11, 16)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primaryWarmDark,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: widget.authCubit.isSyncing
+                  ? null
+                  : () async {
+                      await widget.authCubit.syncNow();
+                    },
+              icon: widget.authCubit.isSyncing
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.sync_rounded, size: 16),
+              label: Text(widget.authCubit.isSyncing ? 'Syncing' : 'Sync Now'),
+            ),
+          ],
+        ),
       ],
     );
   }
