@@ -83,7 +83,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
 
 ## ☁️ Phase 6: End-to-End Encrypted Google Drive Sync
 
-- [ ] **Task 6.1: Google Authentication & Drive API Setup**
+- [x] **Task 6.1: Google Authentication & Drive API Setup**
   - Integrate `google_sign_in` requesting `appDataFolder` scope.
   - Implement authentication state management and token refresh handlers.
 
