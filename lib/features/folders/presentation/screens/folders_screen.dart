@@ -48,6 +48,7 @@ class FoldersScreen extends StatefulWidget {
     this.getSubRemindersUseCase,
     this.setSubRemindersUseCase,
     this.searchNotesUseCase,
+    this.getAllActiveRemindersUseCase,
     this.sessionManager,
     this.biometricAuthService,
     this.googleAuthCubit,
@@ -72,6 +73,7 @@ class FoldersScreen extends StatefulWidget {
   final SetSubRemindersUseCase? setSubRemindersUseCase;
 
   final SearchNotesUseCase? searchNotesUseCase;
+  final GetAllActiveRemindersUseCase? getAllActiveRemindersUseCase;
   final SessionManager? sessionManager;
   final BiometricAuthService? biometricAuthService;
   final GoogleAuthCubit? googleAuthCubit;
@@ -279,6 +281,8 @@ class _FoldersScreenState extends State<FoldersScreen> {
                     delegate: NoteSearchDelegate(
                       searchNotesUseCase: widget.searchNotesUseCase!,
                       sessionManager: widget.sessionManager,
+                      getAllActiveRemindersUseCase:
+                          widget.getAllActiveRemindersUseCase,
                       onNoteSelected: (note) => _openNoteEditor(note: note),
                     ),
                   );

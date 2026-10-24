@@ -104,7 +104,7 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Implement Material 3 light theme featuring crisp white (`#FFFFFF`, `#FAFAFA`) backgrounds and light warm cream accents.
   - Implement dark mode theme.
 
-- [ ] **Task 7.2: Global Search & Filter System**
+- [x] **Task 7.2: Global Search & Filter System**
   - Build instant search engine across note titles and content (respecting folder lock states).
   - Add quick filter chips (e.g. "Has Reminders", "Pinned").
 

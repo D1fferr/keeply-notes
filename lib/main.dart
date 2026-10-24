@@ -127,6 +127,8 @@ Future<void> main() async {
       RescheduleAllRemindersUseCase(reminderRepository);
   final getSubRemindersUseCase = GetSubRemindersUseCase(reminderRepository);
   final setSubRemindersUseCase = SetSubRemindersUseCase(reminderRepository);
+  final getAllActiveRemindersUseCase =
+      GetAllActiveRemindersUseCase(reminderRepository);
 
   // ── Bootstrap biometric security & session manager ─────────────────────────
   final biometricAuthService = BiometricAuthService();
@@ -172,6 +174,7 @@ Future<void> main() async {
     getSubRemindersUseCase: getSubRemindersUseCase,
     setSubRemindersUseCase: setSubRemindersUseCase,
     searchNotesUseCase: searchNotesUseCase,
+    getAllActiveRemindersUseCase: getAllActiveRemindersUseCase,
     sessionManager: sessionManager,
     biometricAuthService: biometricAuthService,
     googleAuthCubit: googleAuthCubit,
@@ -199,6 +202,7 @@ class KeeplyNotesApp extends StatelessWidget {
     required this.getSubRemindersUseCase,
     required this.setSubRemindersUseCase,
     this.searchNotesUseCase,
+    this.getAllActiveRemindersUseCase,
     this.sessionManager,
     this.biometricAuthService,
     this.googleAuthCubit,
@@ -223,6 +227,7 @@ class KeeplyNotesApp extends StatelessWidget {
   final SetSubRemindersUseCase setSubRemindersUseCase;
 
   final SearchNotesUseCase? searchNotesUseCase;
+  final GetAllActiveRemindersUseCase? getAllActiveRemindersUseCase;
   final SessionManager? sessionManager;
   final BiometricAuthService? biometricAuthService;
   final GoogleAuthCubit? googleAuthCubit;
@@ -263,6 +268,7 @@ class KeeplyNotesApp extends StatelessWidget {
         getSubRemindersUseCase: getSubRemindersUseCase,
         setSubRemindersUseCase: setSubRemindersUseCase,
         searchNotesUseCase: searchNotesUseCase,
+        getAllActiveRemindersUseCase: getAllActiveRemindersUseCase,
         sessionManager: sessionManager,
         biometricAuthService: biometricAuthService,
         googleAuthCubit: googleAuthCubit,
