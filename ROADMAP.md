@@ -100,14 +100,14 @@ This document breaks down the development of **Keeply Notes** into modular, atom
 
 ## 🎨 Phase 7: UI Theme, Global Search & Final Polish
 
-- [ ] **Task 7.1: Minimalist UI Theme & Color Palette**
+- [x] **Task 7.1: Minimalist UI Theme & Color Palette**
   - Implement Material 3 light theme featuring crisp white (`#FFFFFF`, `#FAFAFA`) backgrounds and light warm cream accents.
   - Implement dark mode theme.
 
-- [ ] **Task 7.2: Global Search & Filter System**
+- [x] **Task 7.2: Global Search & Filter System**
   - Build instant search engine across note titles and content (respecting folder lock states).
   - Add quick filter chips (e.g. "Has Reminders", "Pinned").
 
-- [ ] **Task 7.3: Testing & Quality Assurance**
+- [x] **Task 7.3: Testing & Quality Assurance**
   - Write unit tests for reminder recurrence logic, CTE queries, and E2EE key derivation.
   - Conduct end-to-end testing of offline behavior and Google Drive sync recovery.

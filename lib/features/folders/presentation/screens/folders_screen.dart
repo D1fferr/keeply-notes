@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/biometric_auth_service.dart';
 import '../../../../core/services/session_manager.dart';
+import '../../../../core/theme/theme_mode_button.dart';
+import '../../../../core/theme/theme_mode_cubit.dart';
 import '../../../notes/domain/note_entity.dart';
 import '../../../notes/domain/usecases/attachment_usecases.dart';
 import '../../../notes/domain/usecases/note_crud_usecases.dart';
@@ -46,9 +48,11 @@ class FoldersScreen extends StatefulWidget {
     this.getSubRemindersUseCase,
     this.setSubRemindersUseCase,
     this.searchNotesUseCase,
+    this.getAllActiveRemindersUseCase,
     this.sessionManager,
     this.biometricAuthService,
     this.googleAuthCubit,
+    this.themeModeCubit,
   });
 
   final FolderCubit folderCubit;
@@ -69,9 +73,11 @@ class FoldersScreen extends StatefulWidget {
   final SetSubRemindersUseCase? setSubRemindersUseCase;
 
   final SearchNotesUseCase? searchNotesUseCase;
+  final GetAllActiveRemindersUseCase? getAllActiveRemindersUseCase;
   final SessionManager? sessionManager;
   final BiometricAuthService? biometricAuthService;
   final GoogleAuthCubit? googleAuthCubit;
+  final ThemeModeCubit? themeModeCubit;
 
   @override
   State<FoldersScreen> createState() => _FoldersScreenState();
@@ -264,6 +270,8 @@ class _FoldersScreenState extends State<FoldersScreen> {
       actions: [
         if (widget.googleAuthCubit != null)
           SyncAccountAppBarButton(authCubit: widget.googleAuthCubit!),
+        if (widget.themeModeCubit != null)
+          ThemeModeButton(cubit: widget.themeModeCubit!),
         IconButton(
           icon: const Icon(Icons.search_rounded),
           onPressed: widget.searchNotesUseCase != null
@@ -273,6 +281,8 @@ class _FoldersScreenState extends State<FoldersScreen> {
                     delegate: NoteSearchDelegate(
                       searchNotesUseCase: widget.searchNotesUseCase!,
                       sessionManager: widget.sessionManager,
+                      getAllActiveRemindersUseCase:
+                          widget.getAllActiveRemindersUseCase,
                       onNoteSelected: (note) => _openNoteEditor(note: note),
                     ),
                   );
@@ -358,7 +368,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
               child: Text(
                 'Folders (${folders.length})',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.textSecondaryLight,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -394,7 +404,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
               child: Text(
                 'Notes (${notes.length})',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.textSecondaryLight,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -473,7 +483,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
               'Tap + to write a note or create a folder.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondaryLight,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],

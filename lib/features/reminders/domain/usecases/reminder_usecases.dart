@@ -11,6 +11,16 @@ class GetReminderForNoteUseCase {
       _repository.getReminderByNoteId(noteId);
 }
 
+/// Retrieves all enabled reminders across all notes.
+class GetAllActiveRemindersUseCase {
+  const GetAllActiveRemindersUseCase(this._repository);
+
+  final ReminderRepository _repository;
+
+  Future<List<ReminderEntity>> call() =>
+      _repository.getAllActiveReminders();
+}
+
 /// Watches real-time updates for a note's primary reminder.
 class WatchReminderForNoteUseCase {
   const WatchReminderForNoteUseCase(this._repository);
