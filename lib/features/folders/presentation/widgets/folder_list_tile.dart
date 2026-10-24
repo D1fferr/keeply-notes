@@ -27,7 +27,7 @@ class FolderListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
+    final colorScheme = theme.colorScheme;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -75,9 +75,7 @@ class FolderListTile extends StatelessWidget {
                   folder.name,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: isLight
-                        ? AppColors.textPrimaryLight
-                        : AppColors.textPrimaryDark,
+                    color: colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -88,9 +86,7 @@ class FolderListTile extends StatelessWidget {
                 icon: Icon(
                   Icons.more_vert_rounded,
                   size: 20,
-                  color: isLight
-                      ? AppColors.textSecondaryLight
-                      : AppColors.textSecondaryDark,
+                  color: colorScheme.onSurfaceVariant,
                 ),
                 onPressed: () => _showContextMenu(context),
                 tooltip: 'More options',

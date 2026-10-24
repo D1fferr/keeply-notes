@@ -21,11 +21,9 @@ class BreadcrumbBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
-    final activeColor =
-        isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark;
-    final inactiveColor =
-        isLight ? AppColors.textSecondaryLight : AppColors.textSecondaryDark;
+    final colorScheme = theme.colorScheme;
+    final activeColor = colorScheme.onSurface;
+    final inactiveColor = colorScheme.onSurfaceVariant;
 
     return SizedBox(
       height: 36,

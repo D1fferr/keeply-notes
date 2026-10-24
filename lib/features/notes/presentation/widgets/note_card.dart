@@ -3,9 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../domain/note_entity.dart';
 import '../../reminders/domain/reminder_entity.dart';
-import '../utils/quill_delta_helper.dart';
-
-/// Card component rendering a single note item in list and grid views.
+import '../utils/quill_delta_helper.dart';/// Card component rendering a single note item in list and grid views.
 ///
 /// Displays:
 /// - Note title (bold)
@@ -37,10 +35,17 @@ class NoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final snippet = QuillDeltaHelper.extractPlainText(note.contentJson);
     final dateFormat = DateFormat('MMM d, y • HH:mm');
     final formattedDate = dateFormat.format(note.updatedAt.toLocal());
+
+    // Theme-aware colours
+    final textPrimary = colorScheme.onSurface;
+    final textSecondary = colorScheme.onSurfaceVariant;
+    final textHint = isDark ? AppColors.textHintDark : AppColors.textHintLight;
+    final pinBorderColor = AppColors.primaryWarm.withOpacity(0.5);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -49,7 +54,7 @@ class NoteCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
           color: note.isPinned
-              ? AppColors.primaryWarm.withOpacity(0.5)
+              ? pinBorderColor
               : Colors.transparent,
           width: note.isPinned ? 1.5 : 0,
         ),
@@ -72,9 +77,7 @@ class NoteCard extends StatelessWidget {
                       note.title.isEmpty ? 'Untitled Note' : note.title,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
+                        color: textPrimary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -116,9 +119,7 @@ class NoteCard extends StatelessWidget {
                       child: Icon(
                         Icons.more_vert_rounded,
                         size: 18,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
+                        color: textSecondary,
                       ),
                     ),
                   ),
@@ -131,9 +132,7 @@ class NoteCard extends StatelessWidget {
                 Text(
                   snippet,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                    color: textSecondary,
                     height: 1.4,
                   ),
                   maxLines: 2,
@@ -150,9 +149,7 @@ class NoteCard extends StatelessWidget {
                     formattedDate,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark
-                          ? AppColors.textSecondaryDark.withOpacity(0.7)
-                          : AppColors.textHintLight,
+                      color: textHint,
                     ),
                   ),
                   if (reminderStream != null || reminder != null)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_constants.dart';
+import 'core/theme/theme_mode_cubit.dart';
 import 'core/database/database_service.dart';
 import 'core/services/biometric_auth_service.dart';
 import 'core/services/encryption_service.dart';
@@ -145,6 +146,9 @@ Future<void> main() async {
     driveSyncService: driveSyncService,
   );
 
+  // ── Bootstrap theme mode cubit ─────────────────────────────────────────────
+  final themeModeCubit = ThemeModeCubit();
+
   // Reschedule active reminders on app startup (e.g. after reboot or process recreate)
   try {
     await rescheduleAllRemindersUseCase();
@@ -171,6 +175,7 @@ Future<void> main() async {
     sessionManager: sessionManager,
     biometricAuthService: biometricAuthService,
     googleAuthCubit: googleAuthCubit,
+    themeModeCubit: themeModeCubit,
   ));
 }
 
@@ -197,6 +202,7 @@ class KeeplyNotesApp extends StatelessWidget {
     this.sessionManager,
     this.biometricAuthService,
     this.googleAuthCubit,
+    this.themeModeCubit,
   });
 
   final FolderCubit folderCubit;
@@ -220,15 +226,27 @@ class KeeplyNotesApp extends StatelessWidget {
   final SessionManager? sessionManager;
   final BiometricAuthService? biometricAuthService;
   final GoogleAuthCubit? googleAuthCubit;
+  final ThemeModeCubit? themeModeCubit;
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild whenever the theme mode changes.
+    if (themeModeCubit != null) {
+      return ListenableBuilder(
+        listenable: themeModeCubit!,
+        builder: (context, _) => _buildApp(themeModeCubit!.mode),
+      );
+    }
+    return _buildApp(ThemeMode.system);
+  }
+
+  Widget _buildApp(ThemeMode themeMode) {
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       home: FoldersScreen(
         folderCubit: folderCubit,
         notesCubit: notesCubit,
@@ -248,6 +266,7 @@ class KeeplyNotesApp extends StatelessWidget {
         sessionManager: sessionManager,
         biometricAuthService: biometricAuthService,
         googleAuthCubit: googleAuthCubit,
+        themeModeCubit: themeModeCubit,
       ),
     );
   }
