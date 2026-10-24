@@ -108,6 +108,6 @@ This document breaks down the development of **Keeply Notes** into modular, atom
   - Build instant search engine across note titles and content (respecting folder lock states).
   - Add quick filter chips (e.g. "Has Reminders", "Pinned").
 
-- [ ] **Task 7.3: Testing & Quality Assurance**
+- [x] **Task 7.3: Testing & Quality Assurance**
   - Write unit tests for reminder recurrence logic, CTE queries, and E2EE key derivation.
   - Conduct end-to-end testing of offline behavior and Google Drive sync recovery.
