@@ -4,11 +4,17 @@ import 'core/constants/app_constants.dart';
 import 'core/database/database_service.dart';
 import 'core/services/biometric_auth_service.dart';
 import 'core/services/encryption_service.dart';
+import 'core/services/google_auth_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/secure_storage_service.dart';
 import 'core/services/session_manager.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
+import 'features/sync/data/repositories/google_auth_repository_impl.dart';
+import 'features/sync/data/services/drive_sync_service.dart';
+import 'features/sync/domain/services/hkdf_key_derivation_service.dart';
+import 'features/sync/domain/services/sync_encryption_service.dart';
+import 'features/sync/presentation/cubit/google_auth_cubit.dart';
 import 'features/folders/data/datasources/folder_local_data_source_impl.dart';
 import 'features/folders/data/repositories/folder_repository_impl.dart';
 import 'features/folders/domain/usecases/folder_crud_usecases.dart';
@@ -125,6 +131,20 @@ Future<void> main() async {
   final biometricAuthService = BiometricAuthService();
   final sessionManager = SessionManager(authService: biometricAuthService);
 
+  // ── Bootstrap Google Drive auth & sync ────────────────────────────────────
+  final googleAuthService = GoogleAuthService();
+  final googleAuthRepository = GoogleAuthRepositoryImpl(googleAuthService);
+  final driveSyncService = DriveSyncService(
+    db: db,
+    authRepository: googleAuthRepository,
+    keyEngine: const SyncKeyDerivationEngine(),
+    encryptionService: const SyncEncryptionService(),
+  );
+  final googleAuthCubit = GoogleAuthCubit(
+    authRepository: googleAuthRepository,
+    driveSyncService: driveSyncService,
+  );
+
   // Reschedule active reminders on app startup (e.g. after reboot or process recreate)
   try {
     await rescheduleAllRemindersUseCase();
@@ -150,6 +170,7 @@ Future<void> main() async {
     searchNotesUseCase: searchNotesUseCase,
     sessionManager: sessionManager,
     biometricAuthService: biometricAuthService,
+    googleAuthCubit: googleAuthCubit,
   ));
 }
 
@@ -175,6 +196,7 @@ class KeeplyNotesApp extends StatelessWidget {
     this.searchNotesUseCase,
     this.sessionManager,
     this.biometricAuthService,
+    this.googleAuthCubit,
   });
 
   final FolderCubit folderCubit;
@@ -197,6 +219,7 @@ class KeeplyNotesApp extends StatelessWidget {
   final SearchNotesUseCase? searchNotesUseCase;
   final SessionManager? sessionManager;
   final BiometricAuthService? biometricAuthService;
+  final GoogleAuthCubit? googleAuthCubit;
 
   @override
   Widget build(BuildContext context) {
@@ -224,6 +247,7 @@ class KeeplyNotesApp extends StatelessWidget {
         searchNotesUseCase: searchNotesUseCase,
         sessionManager: sessionManager,
         biometricAuthService: biometricAuthService,
+        googleAuthCubit: googleAuthCubit,
       ),
     );
   }

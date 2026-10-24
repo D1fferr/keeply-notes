@@ -17,6 +17,8 @@ import '../cubit/folder_state.dart';
 import '../widgets/breadcrumb_bar.dart';
 import '../widgets/folder_dialogs.dart';
 import '../widgets/folder_list_tile.dart';
+import '../../../sync/presentation/cubit/google_auth_cubit.dart';
+import '../../../sync/presentation/widgets/sync_account_app_bar_button.dart';
 
 /// Main screen for browsing and managing the multi-level folder hierarchy and notes.
 ///
@@ -46,6 +48,7 @@ class FoldersScreen extends StatefulWidget {
     this.searchNotesUseCase,
     this.sessionManager,
     this.biometricAuthService,
+    this.googleAuthCubit,
   });
 
   final FolderCubit folderCubit;
@@ -68,6 +71,7 @@ class FoldersScreen extends StatefulWidget {
   final SearchNotesUseCase? searchNotesUseCase;
   final SessionManager? sessionManager;
   final BiometricAuthService? biometricAuthService;
+  final GoogleAuthCubit? googleAuthCubit;
 
   @override
   State<FoldersScreen> createState() => _FoldersScreenState();
@@ -258,6 +262,8 @@ class _FoldersScreenState extends State<FoldersScreen> {
             ),
       title: const Text('Keeply Notes'),
       actions: [
+        if (widget.googleAuthCubit != null)
+          SyncAccountAppBarButton(authCubit: widget.googleAuthCubit!),
         IconButton(
           icon: const Icon(Icons.search_rounded),
           onPressed: widget.searchNotesUseCase != null
